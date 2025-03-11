@@ -1,0 +1,12 @@
+services:
+  telegram-bot:
+    build: .
+    container_name: telegram-bot
+    restart: always
+    env_file:
+      - .env
+
+    ports:
+      - "8443:8443"
+    volumes:
+      - /etc/letsencrypt/live/socialnetwork.ddns.net:/etc/letsencrypt/live/socialnetwork.ddns.net:ro

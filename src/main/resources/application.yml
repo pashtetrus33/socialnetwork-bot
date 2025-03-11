@@ -1,0 +1,17 @@
+spring:
+   application:
+      name: social-network-bot
+
+telegram:
+   bot-token: "${TELEGRAM_BOT_TOKEN}"
+   bot-username: "${TELEGRAM_BOT_USERNAME}"
+   webhook-url: "${TELEGRAM_WEBHOOK_URL}"
+   api-url: "${TELEGRAM_API_URL}"
+
+server:
+   port: 8443
+   ssl:
+      enabled: "${SSL_ENABLED}"
+      key-store: "${SSL_KEY_STORE}"
+      key-store-password: "${SSL_KEY_STORE_PASSWORD}"
+      key-store-type: "${SSL_KEY_STORE_TYPE}"
