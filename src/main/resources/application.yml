@@ -15,3 +15,7 @@ server:
       key-store: "${SSL_KEY_STORE}"
       key-store-password: "${SSL_KEY_STORE_PASSWORD}"
       key-store-type: "${SSL_KEY_STORE_TYPE}"
+
+gateway:
+   api:
+      url: ${GATEWAY_URL:http://91.197.98.213:8080}

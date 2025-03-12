@@ -1,54 +1,98 @@
 package ru.skillbox.social_network_bot.service;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.bots.TelegramWebhookBot;
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
-import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
+import ru.skillbox.social_network_bot.dto.UserSession;
+import ru.skillbox.social_network_bot.dto.UserState;
 
+import java.util.HashMap;
+import java.util.Map;
+
+@Slf4j
 @Service
 public class TelegramBotService extends TelegramWebhookBot {
 
-    @Value("${telegram.bot-token}")
-    private String botToken;
+    private final Map<Long, UserSession> userSessions = new HashMap<>();
+    private final String botUsername;
 
-    @Value("${telegram.bot-username}")
-    private String botUsername;
-
-    @Override
-    public String getBotUsername() {
-        return botUsername;  // Имя вашего бота
+    public TelegramBotService(@Value("${telegram.bot-token}") String botToken,
+                              @Value("${telegram.bot-username}") String botUsername) {
+        super(botToken);
+        this.botUsername = botUsername;
     }
 
     @Override
-    public String getBotToken() {
-        return botToken;  // Токен вашего бота
+    public String getBotUsername() {
+        return botUsername;
     }
 
     @Override
     public String getBotPath() {
-        return "/webhook";  // Путь для вебхука
+        return "/webhook";
     }
 
     @Override
     public BotApiMethod<?> onWebhookUpdateReceived(Update update) {
         if (update.hasMessage() && update.getMessage().hasText()) {
-            String messageText = update.getMessage().getText();  // Получаем текст сообщения
-            Long chatId = update.getMessage().getChatId();  // Получаем ID чата
+            Long chatId = update.getMessage().getChatId();
+            String text = update.getMessage().getText();
 
-            // Создаем объект SendMessage для эхо-ответа
-            SendMessage message = new SendMessage();
-            message.setChatId(chatId.toString());
-            message.setText("Echo: " + messageText);  // Отправляем обратно тот же текст
+            UserSession userSession = userSessions.getOrDefault(chatId, new UserSession(chatId));
+            userSession.setChatId(chatId);
 
-            try {
-                execute(message);  // Отправляем ответ пользователю
-            } catch (TelegramApiException e) {
-                e.printStackTrace();
+            switch (userSession.getState()) {
+                case DEFAULT:
+                    if (text.equals("/start")) {
+                        userSession.setState(UserState.AWAITING_LOGIN);
+                        sendMessage(chatId, """
+                                Пожалуйста, авторизуйтесь, введя логин и пароль.
+                                Введите ваш логин.
+                                """);
+                    }
+                    break;
+
+                case AWAITING_LOGIN:
+                    userSession.setLogin(text);
+                    userSession.setState(UserState.AWAITING_PASSWORD);
+                    sendMessage(chatId, "Теперь введите ваш пароль.");
+                    break;
+
+                case AWAITING_PASSWORD:
+                    userSession.setPassword(text);
+                    String login = userSession.getLogin();
+                    String password = userSession.getPassword();
+
+                    if (authenticateUser(login, password)) {
+                        sendMessage(chatId, "Авторизация успешна!");
+                    } else {
+                        sendMessage(chatId, "Неверный логин или пароль. Попробуйте еще раз.");
+                        userSession.setState(UserState.DEFAULT);
+                    }
+                    break;
             }
+
+            userSessions.put(chatId, userSession);
         }
         return null;
+    }
+
+    private void sendMessage(Long chatId, String text) {
+        SendMessage message = new SendMessage();
+        message.setChatId(String.valueOf(chatId));
+        message.setText(text);
+        try {
+            execute(message);
+        } catch (Exception e) {
+            log.error("Ошибка при отправке сообщения: {}", e.getMessage());
+        }
+    }
+
+    private boolean authenticateUser(String login, String password) {
+        return login.equals(botUsername);
     }
 }
