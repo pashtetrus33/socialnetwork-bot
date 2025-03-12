@@ -27,8 +27,8 @@ public class FreignClientsConfig {
         return requestTemplate -> {
             // Добавляем заголовки, например, для авторизации
             requestTemplate.header("Accept", "application/json");
-            String token = SecurityUtils.getToken();
-            requestTemplate.header("Authorization", "Bearer " + token);
+            //String token = SecurityUtils.getToken();
+            requestTemplate.header("Authorization", "Bearer " + "token");
         };
     }
 
