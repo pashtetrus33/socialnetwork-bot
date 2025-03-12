@@ -5,7 +5,7 @@ FROM openjdk:17-jdk-slim
 WORKDIR /app
 
 # Копируем JAR-файл в контейнер (сборка должна быть в target/)
-COPY target/social-network-bot-3.3.9.jar app.jar
+COPY target/social-network-bot-3.3.8.jar app.jar
 
 EXPOSE 8443
 
