@@ -7,6 +7,9 @@ import org.telegram.telegrambots.bots.TelegramWebhookBot;
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import ru.skillbox.social_network_bot.client.AuthServiceClient;
+import ru.skillbox.social_network_bot.dto.AuthenticateRq;
+import ru.skillbox.social_network_bot.dto.TokenResponse;
 import ru.skillbox.social_network_bot.dto.UserSession;
 import ru.skillbox.social_network_bot.dto.UserState;
 
@@ -17,12 +20,15 @@ import java.util.Map;
 @Service
 public class TelegramBotService extends TelegramWebhookBot {
 
+    private final AuthServiceClient authServiceClient;
+
     private final Map<Long, UserSession> userSessions = new HashMap<>();
     private final String botUsername;
 
-    public TelegramBotService(@Value("${telegram.bot-token}") String botToken,
+    public TelegramBotService(@Value("${telegram.bot-token}") String botToken, AuthServiceClient authServiceClient,
                               @Value("${telegram.bot-username}") String botUsername) {
         super(botToken);
+        this.authServiceClient = authServiceClient;
         this.botUsername = botUsername;
     }
 
@@ -93,6 +99,8 @@ public class TelegramBotService extends TelegramWebhookBot {
     }
 
     private boolean authenticateUser(String login, String password) {
-        return login.equals(botUsername);
+        TokenResponse tokenResponse = authServiceClient.login(new AuthenticateRq(login, password));
+        log.warn("TokenResponse: {}", tokenResponse);
+        return tokenResponse != null;
     }
 }
