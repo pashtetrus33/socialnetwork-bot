@@ -11,7 +11,6 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.User;
 import ru.skillbox.social_network_bot.client.AuthServiceClient;
 import ru.skillbox.social_network_bot.dto.AuthenticateRq;
-import ru.skillbox.social_network_bot.dto.TokenResponse;
 import ru.skillbox.social_network_bot.dto.UserSession;
 import ru.skillbox.social_network_bot.dto.UserState;
 import ru.skillbox.social_network_bot.entity.TelegramUser;
@@ -72,6 +71,11 @@ public class TelegramBotService extends TelegramWebhookBot {
 
                 case "/login":
                     // Начало процесса логина
+                    if (token != null) {
+                        token = null;
+                        sendMessage(chatId, "Текущий токен обнулен.");
+                    }
+
                     userSession.setState(UserState.AWAITING_LOGIN);
                     sendMessage(chatId, "Пожалуйста, введите ваш логин.");
                     break;
