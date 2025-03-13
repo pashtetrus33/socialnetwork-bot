@@ -99,12 +99,12 @@ public class TelegramBotService extends TelegramWebhookBot {
                             // Выводим информацию о странице
                             String pageInfo = String.format(
                                     """
-                                            Страница %d из %d
-                                            Всего элементов: %d
-                                            Всего страниц: %d
-                                            Размер страницы: %d
-                                            Первая страница: %b
-                                            Последняя страница: %b
+                                            Page: %d of %d
+                                            Total elements: %d
+                                            Total pages: %d
+                                            Page size: %d
+                                            First page: %b
+                                            Last page: %b
                                             """,
                                     pagePostDto.getNumber(),              // Номер текущей страницы
                                     pagePostDto.getTotalPages(),          // Общее количество страниц
@@ -195,7 +195,7 @@ public class TelegramBotService extends TelegramWebhookBot {
 
 
                         } else {
-                            sendMessage(chatId, "Login or password is incorrect. Please try again.");
+                            sendMessage(chatId, "Login or password is incorrect. Or auth service is unavailable. Please try again.");
                             userSession.setState(UserState.DEFAULT);
                         }
                     }
@@ -251,12 +251,12 @@ public class TelegramBotService extends TelegramWebhookBot {
 
     public String formatPostMessage(PostDto postDto) {
         StringBuilder message = new StringBuilder();
-        message.append("📅 **Дата публикации:** ").append(postDto.getPublishDate()).append("\n");
-        message.append("📝 **Заголовок:** ").append(postDto.getTitle()).append("\n");
-        message.append("✍️ **Текст поста:**\n").append(postDto.getPostText()).append("\n");
+        message.append("📅 **Publish date:** ").append(postDto.getPublishDate()).append("\n");
+        message.append("📝 **Title:** ").append(postDto.getTitle()).append("\n");
+        message.append("✍️ **Text:**\n").append(postDto.getPostText()).append("\n");
 
         if (postDto.getImagePath() != null) {
-            message.append("🖼 **Изображение:** ").append(postDto.getImagePath()).append("\n");
+            message.append("🖼 **Image:** ").append(postDto.getImagePath()).append("\n");
         }
 
         return message.toString();
