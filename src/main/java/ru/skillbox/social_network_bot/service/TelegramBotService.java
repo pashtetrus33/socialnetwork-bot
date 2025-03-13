@@ -92,7 +92,7 @@ public class TelegramBotService extends TelegramWebhookBot {
 
                         PostSearchDto postSearchDto = PostSearchDto.builder()
                                 .isDeleted(false)
-                                .withFriends(true)
+                                //.withFriends(true)
                                 .build();
 
                         PagePostDto pagePostDto = getPosts(postSearchDto);
