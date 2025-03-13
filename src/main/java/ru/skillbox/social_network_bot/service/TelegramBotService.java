@@ -10,7 +10,6 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import ru.skillbox.social_network_bot.client.AuthServiceClient;
 import ru.skillbox.social_network_bot.dto.AuthenticateRq;
-import ru.skillbox.social_network_bot.dto.TokenResponse;
 import ru.skillbox.social_network_bot.dto.UserSession;
 import ru.skillbox.social_network_bot.dto.UserState;
 
@@ -119,6 +118,9 @@ public class TelegramBotService extends TelegramWebhookBot {
     private boolean authenticateUser(String login, String password) {
 
         try {
+            log.info("Login: {}", login);
+            log.info("Password: {}", password);
+
             tokenResponse = authServiceClient.login(new AuthenticateRq(login, password)).getAccessToken();
 
             log.warn("TokenResponse: {}", tokenResponse);
