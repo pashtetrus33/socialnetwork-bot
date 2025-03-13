@@ -1,7 +1,6 @@
 package ru.skillbox.social_network_bot.service;
 
 import feign.FeignException;
-import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -14,7 +13,6 @@ import ru.skillbox.social_network_bot.client.AuthServiceClient;
 import ru.skillbox.social_network_bot.client.PostServiceClient;
 import ru.skillbox.social_network_bot.dto.*;
 import ru.skillbox.social_network_bot.entity.TelegramUser;
-import ru.skillbox.social_network_bot.utils.TokenUtil;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -30,16 +28,18 @@ public class TelegramBotService extends TelegramWebhookBot {
     private final String botUsername;
     private final TelegramUserService telegramUserService;
     private final PostServiceClient postServiceClient;
+    private final TokenService tokenService;
     private String token;
 
 
     public TelegramBotService(@Value("${telegram.bot-token}") String botToken, AuthServiceClient authServiceClient,
-                              @Value("${telegram.bot-username}") String botUsername, TelegramUserService telegramUserService, PostServiceClient postServiceClient) {
+                              @Value("${telegram.bot-username}") String botUsername, TelegramUserService telegramUserService, PostServiceClient postServiceClient, TokenService tokenService) {
         super(botToken);
         this.authServiceClient = authServiceClient;
         this.botUsername = botUsername;
         this.telegramUserService = telegramUserService;
         this.postServiceClient = postServiceClient;
+        this.tokenService = tokenService;
     }
 
     @Override
@@ -158,7 +158,7 @@ public class TelegramBotService extends TelegramWebhookBot {
 
                         if (authenticateUser(login, password)) {
                             sendMessage(chatId, "Successful authorization!\nAccess token: " + token);
-                            TokenUtil.setToken(token);
+                            tokenService.setToken(token);
                             userSession.setState(UserState.AUTHENTICATED);
                             TelegramUser telegramUser = TelegramUser.builder()
                                     .chatId(chatId)
