@@ -121,7 +121,10 @@ public class TelegramBotService extends TelegramWebhookBot {
             log.info("Login: {}", login);
             log.info("Password: {}", password);
 
-            tokenResponse = authServiceClient.login(new AuthenticateRq(login, password)).getAccessToken();
+            AuthenticateRq authenticateRq = new AuthenticateRq(login, password);
+            log.info("AuthenticateRq: {}", authenticateRq);
+
+            tokenResponse = authServiceClient.login(authenticateRq).getAccessToken();
 
             log.warn("TokenResponse: {}", tokenResponse);
 
