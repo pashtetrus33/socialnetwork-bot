@@ -31,7 +31,7 @@ public class FreignClientsConfig {
     private final TokenService tokenService;
 
     @Bean
-    public RequestInterceptor requestInterceptor(TokenService tokenService) {
+    public RequestInterceptor requestInterceptor() {
         return requestTemplate -> {
             requestTemplate.header("Accept", "application/json");
 
