@@ -12,5 +12,5 @@ public interface AuthServiceClient {
     Boolean validateToken(@Param("token") String token);
 
     @RequestLine("POST /login")
-    TokenResponse login(@RequestBody AuthenticateRq request);
+    TokenResponse login(AuthenticateRq request);
 }
