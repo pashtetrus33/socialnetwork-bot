@@ -11,3 +11,10 @@ databaseChangeLog:
       changes:
         - sqlFile:
             path: db/changelog/db-changelog-2-create-tables.sql
+
+  - changeSet:
+      id: 3
+      author: Pavel Bakanov
+      changes:
+        - sqlFile:
+            path: db/changelog/db-changelog-3-add-login-field.sql

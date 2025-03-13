@@ -28,6 +28,9 @@ public class TelegramUser {
     @Column(nullable = false)
     private String firstName;
 
+    @Column(nullable = false, unique = true)
+    private String login;
+
     private String lastName;
 
     private String username;

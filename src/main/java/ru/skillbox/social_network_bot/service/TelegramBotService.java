@@ -10,6 +10,7 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.User;
 import ru.skillbox.social_network_bot.client.AuthServiceClient;
+import ru.skillbox.social_network_bot.client.PostServiceClient;
 import ru.skillbox.social_network_bot.dto.AuthenticateRq;
 import ru.skillbox.social_network_bot.dto.UserSession;
 import ru.skillbox.social_network_bot.dto.UserState;
@@ -27,14 +28,16 @@ public class TelegramBotService extends TelegramWebhookBot {
     private final Map<Long, UserSession> userSessions = new HashMap<>();
     private final String botUsername;
     private final TelegramUserService telegramUserService;
+    private final PostServiceClient postServiceClient;
     private String token;
 
     public TelegramBotService(@Value("${telegram.bot-token}") String botToken, AuthServiceClient authServiceClient,
-                              @Value("${telegram.bot-username}") String botUsername, TelegramUserService telegramUserService) {
+                              @Value("${telegram.bot-username}") String botUsername, TelegramUserService telegramUserService, PostServiceClient postServiceClient) {
         super(botToken);
         this.authServiceClient = authServiceClient;
         this.botUsername = botUsername;
         this.telegramUserService = telegramUserService;
+        this.postServiceClient = postServiceClient;
     }
 
     @Override
@@ -83,7 +86,9 @@ public class TelegramBotService extends TelegramWebhookBot {
                 case "/get_friends_posts":
                     // Запрос на получение постов друзей
                     if (isAuthenticated(userSession)) {
-                        sendMessage(chatId, "Ок. Идем за постами друзей.");
+                        sendMessage(chatId, "Ок. Идем за постами друзей...");
+                        //postServiceClient.getAll();
+
                     } else {
                         sendMessage(chatId, "Пожалуйста, авторизуйтесь для получения постов.");
                     }
@@ -116,6 +121,7 @@ public class TelegramBotService extends TelegramWebhookBot {
                             userSession.setState(UserState.AUTHENTICATED);
                             TelegramUser telegramUser = TelegramUser.builder()
                                     .chatId(chatId)
+                                    .login(login)
                                     .firstName(user.getFirstName())
                                     .lastName(user.getLastName())
                                     .username(user.getUserName())
