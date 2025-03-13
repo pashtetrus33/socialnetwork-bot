@@ -9,6 +9,7 @@ import feign.codec.Encoder;
 import feign.jackson.JacksonDecoder;
 import feign.jackson.JacksonEncoder;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -17,6 +18,7 @@ import ru.skillbox.social_network_bot.client.PostServiceClient;
 import ru.skillbox.social_network_bot.service.TokenService;
 
 
+@Slf4j
 @RequiredArgsConstructor
 @Configuration
 public class FreignClientsConfig {
@@ -29,14 +31,21 @@ public class FreignClientsConfig {
     private final TokenService tokenService;
 
     @Bean
-    public RequestInterceptor requestInterceptor() {
+    public RequestInterceptor requestInterceptor(TokenService tokenService) {
         return requestTemplate -> {
-            // Добавляем заголовки, например, для авторизации
             requestTemplate.header("Accept", "application/json");
+
+            // Получаем токен КАЖДЫЙ РАЗ перед отправкой запроса
             String token = tokenService.getToken();
-            requestTemplate.header("Authorization", "Bearer " + token);
+
+            if (token != null && !token.isEmpty()) {
+                requestTemplate.header("Authorization", "Bearer " + token);
+            } else {
+                log.warn("Токен отсутствует! Запрос может завершиться ошибкой 401.");
+            }
         };
     }
+
 
 
     @Bean
