@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
 import ru.skillbox.social_network_bot.client.AuthServiceClient;
 import ru.skillbox.social_network_bot.client.PostServiceClient;
 import ru.skillbox.social_network_bot.service.TelegramBotService;
@@ -20,6 +21,7 @@ import ru.skillbox.social_network_bot.service.TelegramBotService;
 @Configuration
 public class FreignClientsConfig {
 
+    @Lazy
     private final TelegramBotService telegramBotService;
 
     @Value("${gateway.api.url}")
