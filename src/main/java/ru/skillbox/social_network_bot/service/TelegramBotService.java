@@ -25,7 +25,7 @@ public class TelegramBotService extends TelegramWebhookBot {
 
     private final Map<Long, UserSession> userSessions = new HashMap<>();
     private final String botUsername;
-    private String tokenResponse;
+    private String token;
 
     public TelegramBotService(@Value("${telegram.bot-token}") String botToken, AuthServiceClient authServiceClient,
                               @Value("${telegram.bot-username}") String botUsername) {
@@ -74,6 +74,17 @@ public class TelegramBotService extends TelegramWebhookBot {
                     }
                     break;
 
+
+                case "/validate":
+
+                    if (tokenValid(token)) {
+                        sendMessage(chatId, "Токен валидный.");
+                    } else {
+                        sendMessage(chatId, "Токен не валидный.Пожалуйста, авторизуйтесь для получения постов.");
+                        userSession.setState(UserState.DEFAULT);
+                    }
+                    break;
+
                 default:
                     // Обработка ввода логина и пароля
                     if (userSession.getState() == UserState.AWAITING_LOGIN) {
@@ -86,7 +97,7 @@ public class TelegramBotService extends TelegramWebhookBot {
                         String password = userSession.getPassword();
 
                         if (authenticateUser(login, password)) {
-                            sendMessage(chatId, "Авторизация успешна!\nТокен: " + tokenResponse);
+                            sendMessage(chatId, "Авторизация успешна!\nТокен: " + token);
                             userSession.setState(UserState.AUTHENTICATED);
                         } else {
                             sendMessage(chatId, "Неверный логин или пароль. Попробуйте еще раз.");
@@ -119,25 +130,27 @@ public class TelegramBotService extends TelegramWebhookBot {
     private boolean authenticateUser(String login, String password) {
 
         try {
-            log.info("Login: {}", login);
-            log.info("Password: {}", password);
-
             AuthenticateRq authenticateRq = new AuthenticateRq();
             authenticateRq.setEmail(login);
             authenticateRq.setPassword(password);
 
             log.info("AuthenticateRq: {}", authenticateRq);
 
-            TokenResponse tokenResponse1 = authServiceClient.login(authenticateRq);
-
-            tokenResponse = tokenResponse1.getAccessToken();
-
-            log.warn("TokenResponse: {}", tokenResponse);
+            token = authServiceClient.login(authenticateRq).getAccessToken();
 
         } catch (FeignException e) {
             return false;
         }
 
         return true;
+    }
+
+    private boolean tokenValid(String token) {
+        try {
+            return authServiceClient.validateToken(token);
+
+        } catch (FeignException e) {
+            return false;
+        }
     }
 }

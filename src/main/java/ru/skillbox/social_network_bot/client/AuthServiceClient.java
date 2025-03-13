@@ -1,6 +1,5 @@
 package ru.skillbox.social_network_bot.client;
 
-import feign.Body;
 import feign.Headers;
 import feign.Param;
 import feign.RequestLine;
