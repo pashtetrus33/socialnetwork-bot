@@ -92,10 +92,11 @@ public class TelegramBotService extends TelegramWebhookBot {
 
                         PostSearchDto postSearchDto = PostSearchDto.builder()
                                 .isDeleted(false)
-                                //.withFriends(true)
+                                .withFriends(true)
                                 .build();
 
                         PagePostDto pagePostDto = getPosts(postSearchDto);
+                        log.info("PagePostDto: {}", pagePostDto);
 
                         if (pagePostDto != null) {
 
@@ -255,9 +256,11 @@ public class TelegramBotService extends TelegramWebhookBot {
 
     private PagePostDto getPosts(PostSearchDto postSearchDto) {
         try {
+            log.info("Getting posts for {}", postSearchDto);
             return postServiceClient.getAll(postSearchDto);
 
         } catch (FeignException e) {
+            log.error("Freign client exception: {}", e.getMessage());
             return null;
         }
     }
