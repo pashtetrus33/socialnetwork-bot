@@ -12,17 +12,14 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Lazy;
 import ru.skillbox.social_network_bot.client.AuthServiceClient;
 import ru.skillbox.social_network_bot.client.PostServiceClient;
-import ru.skillbox.social_network_bot.service.TelegramBotService;
+import ru.skillbox.social_network_bot.utils.TokenUtil;
 
 @RequiredArgsConstructor
 @Configuration
 public class FreignClientsConfig {
 
-    @Lazy
-    private final TelegramBotService telegramBotService;
 
     @Value("${gateway.api.url}")
     private String gatewayApiUrl;
@@ -34,7 +31,7 @@ public class FreignClientsConfig {
         return requestTemplate -> {
             // Добавляем заголовки, например, для авторизации
             requestTemplate.header("Accept", "application/json");
-            String token = telegramBotService.getToken();
+            String token = TokenUtil.getToken();
             requestTemplate.header("Authorization", "Bearer " + token);
         };
     }
