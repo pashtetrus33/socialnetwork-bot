@@ -14,7 +14,11 @@ public class TelegramUserService {
 
     private final TelegramUserRepository telegramUserRepository;
 
-    public TelegramUser create(TelegramUser telegramUser) {
-        return telegramUserRepository.save(telegramUser);
+    public void save(TelegramUser telegramUser) {
+        telegramUserRepository.save(telegramUser);
+    }
+
+    public TelegramUser findByChatId(Long chatId) {
+        return telegramUserRepository.findByChatId(chatId).orElse(null);
     }
 }

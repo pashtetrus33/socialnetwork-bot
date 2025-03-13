@@ -16,6 +16,7 @@ import ru.skillbox.social_network_bot.dto.UserSession;
 import ru.skillbox.social_network_bot.dto.UserState;
 import ru.skillbox.social_network_bot.entity.TelegramUser;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -69,28 +70,28 @@ public class TelegramBotService extends TelegramWebhookBot {
             switch (text) {
                 case "/start":
                     // Приветствие
-                    sendMessage(chatId, "Привет! Чем могу помочь?");
+                    sendMessage(chatId, "Hi! How can I help you :)");
                     break;
 
                 case "/login":
                     // Начало процесса логина
                     if (token != null) {
                         token = null;
-                        sendMessage(chatId, "Текущий токен обнулен.");
+                        sendMessage(chatId, "Current access token is deleted.");
                     }
 
                     userSession.setState(UserState.AWAITING_LOGIN);
-                    sendMessage(chatId, "Пожалуйста, введите ваш логин.");
+                    sendMessage(chatId, "Please enter your login:");
                     break;
 
                 case "/get_friends_posts":
                     // Запрос на получение постов друзей
                     if (isAuthenticated(userSession)) {
-                        sendMessage(chatId, "Ок. Идем за постами друзей...");
+                        sendMessage(chatId, "Ок. Let's go for the friends posts...");
                         //postServiceClient.getAll();
 
                     } else {
-                        sendMessage(chatId, "Пожалуйста, авторизуйтесь для получения постов.");
+                        sendMessage(chatId, "Please login first.");
                     }
                     break;
 
@@ -98,9 +99,9 @@ public class TelegramBotService extends TelegramWebhookBot {
                 case "/validate":
 
                     if (tokenValid(token)) {
-                        sendMessage(chatId, "Токен валидный.");
+                        sendMessage(chatId, "Token is valid.");
                     } else {
-                        sendMessage(chatId, "Токен не валидный.Пожалуйста, авторизуйтесь для получения постов.");
+                        sendMessage(chatId, "Token is not valid. Please login first.");
                         userSession.setState(UserState.DEFAULT);
                     }
                     break;
@@ -110,14 +111,14 @@ public class TelegramBotService extends TelegramWebhookBot {
                     if (userSession.getState() == UserState.AWAITING_LOGIN) {
                         userSession.setLogin(text);
                         userSession.setState(UserState.AWAITING_PASSWORD);
-                        sendMessage(chatId, "Теперь введите ваш пароль.");
+                        sendMessage(chatId, "Please enter your password:");
                     } else if (userSession.getState() == UserState.AWAITING_PASSWORD) {
                         userSession.setPassword(text);
                         String login = userSession.getLogin();
                         String password = userSession.getPassword();
 
                         if (authenticateUser(login, password)) {
-                            sendMessage(chatId, "Авторизация успешна!\nТокен: " + token);
+                            sendMessage(chatId, "Successful authorization!\nAccess token: " + token);
                             userSession.setState(UserState.AUTHENTICATED);
                             TelegramUser telegramUser = TelegramUser.builder()
                                     .chatId(chatId)
@@ -131,11 +132,34 @@ public class TelegramBotService extends TelegramWebhookBot {
                                     .isActive(true) // Предположим, что по умолчанию активный
                                     .build();
 
-                            telegramUserService.create(telegramUser);
-                            log.info("New telegram user created: {}", telegramUser);
+                            // Проверяем, существует ли пользователь с таким chatId
+                            TelegramUser existingUser = telegramUserService.findByChatId(telegramUser.getChatId());
+
+                            if (existingUser != null) {
+                                // Если пользователь с таким chatId уже существует, обновляем его данные
+                                existingUser.setLogin(telegramUser.getLogin());
+                                existingUser.setFirstName(telegramUser.getFirstName());
+                                existingUser.setLastName(telegramUser.getLastName());
+                                existingUser.setUsername(telegramUser.getUsername());
+                                existingUser.setPhoneNumber(telegramUser.getPhoneNumber());
+                                existingUser.setLanguageCode(telegramUser.getLanguageCode());
+                                existingUser.setIsBot(telegramUser.getIsBot());
+                                existingUser.setIsActive(telegramUser.getIsActive());
+                                existingUser.setUpdatedAt(LocalDateTime.now());
+
+                                // Сохраняем изменения в базу
+                                telegramUserService.save(existingUser);
+                                log.info("Telegram user updated and saved: {}", existingUser);
+                                log.info("Telegram user updated: {}", existingUser);
+                            } else {
+                                // Если пользователя с таким chatId нет, создаем нового
+                                telegramUserService.save(telegramUser);
+                                log.info("New telegram user created: {}", telegramUser);
+                            }
+
 
                         } else {
-                            sendMessage(chatId, "Неверный логин или пароль. Попробуйте еще раз.");
+                            sendMessage(chatId, "Login or password is incorrect. Please try again.");
                             userSession.setState(UserState.DEFAULT);
                         }
                     }
@@ -158,7 +182,7 @@ public class TelegramBotService extends TelegramWebhookBot {
         try {
             execute(message);
         } catch (Exception e) {
-            log.error("Ошибка при отправке сообщения: {}", e.getMessage());
+            log.error("Error while sending message: {}", e.getMessage());
         }
     }
 
