@@ -25,6 +25,7 @@ public class TelegramBotService extends TelegramWebhookBot {
 
     private final Map<Long, UserSession> userSessions = new HashMap<>();
     private final String botUsername;
+    private String tokenResponse;
 
     public TelegramBotService(@Value("${telegram.bot-token}") String botToken, AuthServiceClient authServiceClient,
                               @Value("${telegram.bot-username}") String botUsername) {
@@ -85,7 +86,7 @@ public class TelegramBotService extends TelegramWebhookBot {
                         String password = userSession.getPassword();
 
                         if (authenticateUser(login, password)) {
-                            sendMessage(chatId, "Авторизация успешна!");
+                            sendMessage(chatId, "Авторизация успешна!\nТокен: " + tokenResponse);
                             userSession.setState(UserState.AUTHENTICATED);
                         } else {
                             sendMessage(chatId, "Неверный логин или пароль. Попробуйте еще раз.");
@@ -118,8 +119,10 @@ public class TelegramBotService extends TelegramWebhookBot {
     private boolean authenticateUser(String login, String password) {
 
         try {
-            TokenResponse tokenResponse = authServiceClient.login(new AuthenticateRq(login, password));
+            tokenResponse = authServiceClient.login(new AuthenticateRq(login, password)).getAccessToken();
+
             log.warn("TokenResponse: {}", tokenResponse);
+
         } catch (FeignException e) {
             return false;
         }
