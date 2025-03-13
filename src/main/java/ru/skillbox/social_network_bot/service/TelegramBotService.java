@@ -1,6 +1,7 @@
 package ru.skillbox.social_network_bot.service;
 
 import feign.FeignException;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -28,7 +29,9 @@ public class TelegramBotService extends TelegramWebhookBot {
     private final String botUsername;
     private final TelegramUserService telegramUserService;
     private final PostServiceClient postServiceClient;
+    @Getter
     private String token;
+
 
     public TelegramBotService(@Value("${telegram.bot-token}") String botToken, AuthServiceClient authServiceClient,
                               @Value("${telegram.bot-username}") String botUsername, TelegramUserService telegramUserService, PostServiceClient postServiceClient) {

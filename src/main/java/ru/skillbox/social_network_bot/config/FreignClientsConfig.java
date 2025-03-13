@@ -8,14 +8,19 @@ import feign.codec.Decoder;
 import feign.codec.Encoder;
 import feign.jackson.JacksonDecoder;
 import feign.jackson.JacksonEncoder;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import ru.skillbox.social_network_bot.client.AuthServiceClient;
 import ru.skillbox.social_network_bot.client.PostServiceClient;
+import ru.skillbox.social_network_bot.service.TelegramBotService;
 
+@RequiredArgsConstructor
 @Configuration
 public class FreignClientsConfig {
+
+    private final TelegramBotService telegramBotService;
 
     @Value("${gateway.api.url}")
     private String gatewayApiUrl;
@@ -27,8 +32,8 @@ public class FreignClientsConfig {
         return requestTemplate -> {
             // Добавляем заголовки, например, для авторизации
             requestTemplate.header("Accept", "application/json");
-            //String token = SecurityUtils.getToken();
-            requestTemplate.header("Authorization", "Bearer " + "token");
+            String token = telegramBotService.getToken();
+            requestTemplate.header("Authorization", "Bearer " + token);
         };
     }
 
