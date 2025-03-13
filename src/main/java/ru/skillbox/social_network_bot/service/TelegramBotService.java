@@ -11,9 +11,7 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.User;
 import ru.skillbox.social_network_bot.client.AuthServiceClient;
 import ru.skillbox.social_network_bot.client.PostServiceClient;
-import ru.skillbox.social_network_bot.dto.AuthenticateRq;
-import ru.skillbox.social_network_bot.dto.UserSession;
-import ru.skillbox.social_network_bot.dto.UserState;
+import ru.skillbox.social_network_bot.dto.*;
 import ru.skillbox.social_network_bot.entity.TelegramUser;
 
 import java.time.LocalDateTime;
@@ -88,7 +86,45 @@ public class TelegramBotService extends TelegramWebhookBot {
                     // Запрос на получение постов друзей
                     if (isAuthenticated(userSession)) {
                         sendMessage(chatId, "Ок. Let's go for the friends posts...");
-                        //postServiceClient.getAll();
+
+                        PostSearchDto postSearchDto = PostSearchDto.builder()
+                                .isDeleted(false)
+                                .withFriends(true)
+                                .build();
+
+                        PagePostDto pagePostDto = postServiceClient.getAll(postSearchDto);
+
+                        if (pagePostDto != null) {
+
+                            // Выводим информацию о странице
+                            String pageInfo = String.format(
+                                    """
+                                            Страница %d из %d
+                                            Всего элементов: %d
+                                            Всего страниц: %d
+                                            Размер страницы: %d
+                                            Первая страница: %b
+                                            Последняя страница: %b
+                                            """,
+                                    pagePostDto.getNumber(),              // Номер текущей страницы
+                                    pagePostDto.getTotalPages(),          // Общее количество страниц
+                                    pagePostDto.getTotalElements(),       // Общее количество элементов
+                                    pagePostDto.getTotalPages(),          // Общее количество страниц
+                                    pagePostDto.getSize(),                // Размер страницы (количество элементов на странице)
+                                    pagePostDto.getFirst(),               // Это первая страница?
+                                    pagePostDto.getLast()                 // Это последняя страница?
+                            );
+
+                            // Отправляем информацию о странице
+                            sendMessage(chatId, pageInfo);
+
+                            pagePostDto.getContent().stream()
+                                    .map(this::formatPostMessage)
+                                    .forEach(message -> sendMessage(chatId, message));
+
+                        } else {
+                            sendMessage(chatId, "Posts not found. Sucks!");
+                        }
 
                     } else {
                         sendMessage(chatId, "Please login first.");
@@ -150,7 +186,7 @@ public class TelegramBotService extends TelegramWebhookBot {
                                 // Сохраняем изменения в базу
                                 telegramUserService.save(existingUser);
                                 log.info("Telegram user updated and saved: {}", existingUser);
-                                log.info("Telegram user updated: {}", existingUser);
+
                             } else {
                                 // Если пользователя с таким chatId нет, создаем нового
                                 telegramUserService.save(telegramUser);
@@ -211,5 +247,18 @@ public class TelegramBotService extends TelegramWebhookBot {
         } catch (FeignException e) {
             return false;
         }
+    }
+
+    public String formatPostMessage(PostDto postDto) {
+        StringBuilder message = new StringBuilder();
+        message.append("📅 **Дата публикации:** ").append(postDto.getPublishDate()).append("\n");
+        message.append("📝 **Заголовок:** ").append(postDto.getTitle()).append("\n");
+        message.append("✍️ **Текст поста:**\n").append(postDto.getPostText()).append("\n");
+
+        if (postDto.getImagePath() != null) {
+            message.append("🖼 **Изображение:** ").append(postDto.getImagePath()).append("\n");
+        }
+
+        return message.toString();
     }
 }
