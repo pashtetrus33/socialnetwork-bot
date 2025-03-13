@@ -1,5 +1,6 @@
 package ru.skillbox.social_network_bot.service;
 
+import feign.FeignException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -51,33 +52,45 @@ public class TelegramBotService extends TelegramWebhookBot {
             UserSession userSession = userSessions.getOrDefault(chatId, new UserSession(chatId));
             userSession.setChatId(chatId);
 
-            switch (userSession.getState()) {
-                case DEFAULT:
-                    if (text.equals("/start")) {
-                        userSession.setState(UserState.AWAITING_LOGIN);
-                        sendMessage(chatId, """
-                                Пожалуйста, авторизуйтесь, введя логин и пароль.
-                                Введите ваш логин.
-                                """);
+            switch (text) {
+                case "/start":
+                    // Приветствие
+                    sendMessage(chatId, "Привет! Чем могу помочь?");
+                    break;
+
+                case "/login":
+                    // Начало процесса логина
+                    userSession.setState(UserState.AWAITING_LOGIN);
+                    sendMessage(chatId, "Пожалуйста, введите ваш логин.");
+                    break;
+
+                case "/get_friends_posts":
+                    // Запрос на получение постов друзей
+                    if (isAuthenticated(userSession)) {
+                        sendMessage(chatId, "Ок. Идем за постами друзей.");
+                    } else {
+                        sendMessage(chatId, "Пожалуйста, авторизуйтесь для получения постов.");
                     }
                     break;
 
-                case AWAITING_LOGIN:
-                    userSession.setLogin(text);
-                    userSession.setState(UserState.AWAITING_PASSWORD);
-                    sendMessage(chatId, "Теперь введите ваш пароль.");
-                    break;
+                default:
+                    // Обработка ввода логина и пароля
+                    if (userSession.getState() == UserState.AWAITING_LOGIN) {
+                        userSession.setLogin(text);
+                        userSession.setState(UserState.AWAITING_PASSWORD);
+                        sendMessage(chatId, "Теперь введите ваш пароль.");
+                    } else if (userSession.getState() == UserState.AWAITING_PASSWORD) {
+                        userSession.setPassword(text);
+                        String login = userSession.getLogin();
+                        String password = userSession.getPassword();
 
-                case AWAITING_PASSWORD:
-                    userSession.setPassword(text);
-                    String login = userSession.getLogin();
-                    String password = userSession.getPassword();
-
-                    if (authenticateUser(login, password)) {
-                        sendMessage(chatId, "Авторизация успешна!");
-                    } else {
-                        sendMessage(chatId, "Неверный логин или пароль. Попробуйте еще раз.");
-                        userSession.setState(UserState.DEFAULT);
+                        if (authenticateUser(login, password)) {
+                            sendMessage(chatId, "Авторизация успешна!");
+                            userSession.setState(UserState.AUTHENTICATED);
+                        } else {
+                            sendMessage(chatId, "Неверный логин или пароль. Попробуйте еще раз.");
+                            userSession.setState(UserState.DEFAULT);
+                        }
                     }
                     break;
             }
@@ -85,6 +98,10 @@ public class TelegramBotService extends TelegramWebhookBot {
             userSessions.put(chatId, userSession);
         }
         return null;
+    }
+
+    private boolean isAuthenticated(UserSession userSession) {
+        return userSession.getState() == UserState.AUTHENTICATED;
     }
 
     private void sendMessage(Long chatId, String text) {
@@ -99,8 +116,14 @@ public class TelegramBotService extends TelegramWebhookBot {
     }
 
     private boolean authenticateUser(String login, String password) {
-        TokenResponse tokenResponse = authServiceClient.login(new AuthenticateRq(login, password));
-        log.warn("TokenResponse: {}", tokenResponse);
-        return tokenResponse != null;
+
+        try {
+            TokenResponse tokenResponse = authServiceClient.login(new AuthenticateRq(login, password));
+            log.warn("TokenResponse: {}", tokenResponse);
+        } catch (FeignException e) {
+            return false;
+        }
+
+        return true;
     }
 }
