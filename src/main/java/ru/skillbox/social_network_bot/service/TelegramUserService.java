@@ -1,0 +1,20 @@
+package ru.skillbox.social_network_bot.service;
+
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import ru.skillbox.social_network_bot.entity.TelegramUser;
+import ru.skillbox.social_network_bot.repository.TelegramUserRepository;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class TelegramUserService {
+
+    private final TelegramUserRepository telegramUserRepository;
+
+    public TelegramUser create(TelegramUser telegramUser) {
+        return telegramUserRepository.save(telegramUser);
+    }
+}

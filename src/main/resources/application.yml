@@ -2,15 +2,19 @@ spring:
    application:
       name: social-network-bot
 
-
-   datasource:
-      url: "" # Или явно отключить DataSource
    jpa:
-      enabled: false
-   autoconfigure:
-      exclude:
-         - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
-         - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+      generate-ddl: false
+      open-in-view: false
+   datasource:
+      url: jdbc:postgresql://postgres:5432/bot_db?currentSchema=schema_bot
+      username: postgre_user
+      password: postgre_secret_password
+      driver-class-name: org.postgresql.Driver
+      hikari:
+         connection-timeout: 10000
+
+   liquibase:
+      change-log: classpath:/db/changelog/db.changelog-master.yml
 
 
 telegram:
