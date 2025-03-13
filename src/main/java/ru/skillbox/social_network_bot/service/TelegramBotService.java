@@ -95,7 +95,7 @@ public class TelegramBotService extends TelegramWebhookBot {
                                 .withFriends(true)
                                 .build();
 
-                        PagePostDto pagePostDto = postServiceClient.getAll(postSearchDto);
+                        PagePostDto pagePostDto = getPosts(postSearchDto);
 
                         if (pagePostDto != null) {
 
@@ -126,7 +126,7 @@ public class TelegramBotService extends TelegramWebhookBot {
                                     .forEach(message -> sendMessage(chatId, message));
 
                         } else {
-                            sendMessage(chatId, "Posts not found. Sucks!");
+                            sendMessage(chatId, "Posts not found or post service is unavailable. Sucks!");
                         }
 
                     } else {
@@ -250,6 +250,15 @@ public class TelegramBotService extends TelegramWebhookBot {
 
         } catch (FeignException e) {
             return false;
+        }
+    }
+
+    private PagePostDto getPosts(PostSearchDto postSearchDto) {
+        try {
+            return postServiceClient.getAll(postSearchDto);
+
+        } catch (FeignException e) {
+            return null;
         }
     }
 
