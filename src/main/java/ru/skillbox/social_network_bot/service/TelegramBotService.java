@@ -122,6 +122,7 @@ public class TelegramBotService extends TelegramWebhookBot {
 
                         Boolean isCreated = createPost(postDto);
                         log.info("Post is created: {}", isCreated);
+                        userSession.setState(UserState.DEFAULT);
                     }
 
                     // Обработка ввода логина и пароля
@@ -137,7 +138,7 @@ public class TelegramBotService extends TelegramWebhookBot {
                         if (authenticateUser(login, password)) {
                             sendMessage(chatId, "Successful authorization!\nAccess token: " + token);
                             tokenService.setToken(token);
-                            userSession.setState(UserState.AUTHENTICATED);
+                            userSession.setAuthenticated(true);
                             TelegramUser telegramUser = TelegramUser.builder()
                                     .chatId(chatId)
                                     .login(login)
@@ -191,7 +192,7 @@ public class TelegramBotService extends TelegramWebhookBot {
 
 
     private boolean isAuthenticated(UserSession userSession) {
-        return userSession.getState() == UserState.AUTHENTICATED;
+        return userSession.isAuthenticated();
     }
 
     private void sendMessage(Long chatId, String text) {

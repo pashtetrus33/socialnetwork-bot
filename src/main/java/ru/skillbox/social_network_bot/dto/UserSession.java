@@ -14,6 +14,7 @@ public class UserSession {
     private String password;
     private String title;
     private String postText;
+    private boolean isAuthenticated;
 
 
     public UserSession(Long chatId) {
