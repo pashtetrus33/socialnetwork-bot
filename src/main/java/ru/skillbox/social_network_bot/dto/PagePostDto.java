@@ -1,6 +1,7 @@
 package ru.skillbox.social_network_bot.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
@@ -28,6 +29,7 @@ public class PagePostDto {
     @PositiveOrZero
     private Integer totalPages;
 
+    @JsonProperty("pageNumber")
     @NotNull
     @Min(0)
     private Integer number;
