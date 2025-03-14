@@ -1,5 +1,6 @@
 package ru.skillbox.social_network_bot.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
@@ -34,7 +35,8 @@ public class PagePostDto {
 
     private List<PostDto> content;
 
-    private Sort.Order[] sort;
+    @JsonIgnore
+    private Sort sort;
 
     @NotNull
     private Boolean first;
