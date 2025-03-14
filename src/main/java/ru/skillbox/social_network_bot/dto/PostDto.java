@@ -1,5 +1,6 @@
 package ru.skillbox.social_network_bot.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.constraints.*;
 import lombok.*;
 
@@ -17,8 +18,10 @@ public class PostDto {
 
     private UUID id;
 
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime time;
 
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime timeChanged;
 
     private UUID authorId;
@@ -53,5 +56,6 @@ public class PostDto {
     @Size(max = 512, message = "Image path must not exceed 512 characters")
     private String imagePath;
 
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime publishDate;
 }
