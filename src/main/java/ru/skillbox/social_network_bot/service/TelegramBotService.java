@@ -93,6 +93,9 @@ public class TelegramBotService extends TelegramWebhookBot {
                     getFriends(userSession, chatId, false);
                     break;
 
+                case "/create_post":
+                    create(userSession, chatId);
+                    break;
 
                 case "/validate":
 
@@ -105,6 +108,21 @@ public class TelegramBotService extends TelegramWebhookBot {
                     break;
 
                 default:
+                    if (userSession.getState() == UserState.AWAITING_TITLE) {
+                        userSession.setTitle(text);
+                        userSession.setState(UserState.AWAITING_TEXT);
+                        sendMessage(chatId, "Please enter text:");
+                    } else if (userSession.getState() == UserState.AWAITING_TEXT) {
+
+                        PostDto postDto = PostDto.builder()
+                                .title(userSession.getTitle())
+                                .postText(text)
+                                .build();
+
+                        Boolean isCreated = createPost(postDto);
+                        log.info("Post is created: {}", isCreated);
+                    }
+
                     // Обработка ввода логина и пароля
                     if (userSession.getState() == UserState.AWAITING_LOGIN) {
                         userSession.setLogin(text);
@@ -224,6 +242,19 @@ public class TelegramBotService extends TelegramWebhookBot {
         }
     }
 
+
+    private boolean createPost(PostDto postDto) {
+        try {
+            log.info("Creating post {}", postDto);
+            postServiceClient.create(postDto);
+            return true;
+
+        } catch (FeignException e) {
+            log.error("Freign client exception: {}", e.getMessage());
+            return false;
+        }
+    }
+
     public String formatPostMessage(PostDto postDto) {
         StringBuilder message = new StringBuilder();
         message.append("📅 **Publish date:** ").append(postDto.getPublishDate()).append("\n");
@@ -281,6 +312,17 @@ public class TelegramBotService extends TelegramWebhookBot {
             } else {
                 sendMessage(chatId, "Posts not found or post service is unavailable. Sucks!");
             }
+
+        } else {
+            sendMessage(chatId, "Please login first.");
+        }
+    }
+
+    private void create(UserSession userSession, Long chatId) {
+
+        if (isAuthenticated(userSession)) {
+            userSession.setState(UserState.AWAITING_TITLE);
+            sendMessage(chatId, "Please enter title:");
 
         } else {
             sendMessage(chatId, "Please login first.");

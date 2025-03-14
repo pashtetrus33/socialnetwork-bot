@@ -12,6 +12,8 @@ public class UserSession {
     private UserState state = UserState.DEFAULT;
     private String login;
     private String password;
+    private String title;
+    private String postText;
 
 
     public UserSession(Long chatId) {
