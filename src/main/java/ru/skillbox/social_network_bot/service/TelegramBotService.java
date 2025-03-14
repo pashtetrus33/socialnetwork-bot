@@ -86,53 +86,11 @@ public class TelegramBotService extends TelegramWebhookBot {
                     break;
 
                 case "/get_friends_posts":
-                    // Запрос на получение постов друзей
-                    if (isAuthenticated(userSession)) {
-                        sendMessage(chatId, "Ок. Let's go for the friends posts...");
+                    getFriends(userSession, chatId, true);
+                    break;
 
-                        PostSearchDto postSearchDto = PostSearchDto.builder()
-                                .isDeleted(false)
-                                .withFriends(true)
-                                .build();
-
-                        PagePostDto pagePostDto = getPosts(postSearchDto);
-                        log.info("PagePostDto: {}", pagePostDto);
-
-                        if (pagePostDto != null) {
-
-                            // Выводим информацию о странице
-                            String pageInfo = String.format(
-                                    """
-                                            Page: %d of %d
-                                            Total elements: %d
-                                            Total pages: %d
-                                            Page size: %d
-                                            First page: %b
-                                            Last page: %b
-                                            """,
-                                    pagePostDto.getNumber(),              // Номер текущей страницы
-                                    pagePostDto.getTotalPages(),          // Общее количество страниц
-                                    pagePostDto.getTotalElements(),       // Общее количество элементов
-                                    pagePostDto.getTotalPages(),          // Общее количество страниц
-                                    pagePostDto.getSize(),                // Размер страницы (количество элементов на странице)
-                                    pagePostDto.getFirst(),               // Это первая страница?
-                                    pagePostDto.getLast()                 // Это последняя страница?
-                            );
-
-                            // Отправляем информацию о странице
-                            sendMessage(chatId, pageInfo);
-
-                            pagePostDto.getContent().stream()
-                                    .map(this::formatPostMessage)
-                                    .forEach(message -> sendMessage(chatId, message));
-
-                        } else {
-                            sendMessage(chatId, "Posts not found or post service is unavailable. Sucks!");
-                        }
-
-                    } else {
-                        sendMessage(chatId, "Please login first.");
-                    }
+                case "/get_all_posts":
+                    getFriends(userSession, chatId, false);
                     break;
 
 
@@ -212,6 +170,7 @@ public class TelegramBotService extends TelegramWebhookBot {
         return null;
     }
 
+
     private boolean isAuthenticated(UserSession userSession) {
         return userSession.getState() == UserState.AUTHENTICATED;
     }
@@ -276,5 +235,55 @@ public class TelegramBotService extends TelegramWebhookBot {
         }
 
         return message.toString();
+    }
+
+    private void getFriends(UserSession userSession, Long chatId, Boolean withFriends) {
+        // Запрос на получение постов друзей
+        if (isAuthenticated(userSession)) {
+            sendMessage(chatId, "Ок. Let's go for the friends posts...");
+
+            PostSearchDto postSearchDto = PostSearchDto.builder()
+                    .isDeleted(false)
+                    .withFriends(withFriends)
+                    .build();
+
+            PagePostDto pagePostDto = getPosts(postSearchDto);
+            log.info("PagePostDto: {}", pagePostDto);
+
+            if (pagePostDto != null) {
+
+                // Выводим информацию о странице
+                String pageInfo = String.format(
+                        """
+                                Page: %d of %d
+                                Total elements: %d
+                                Total pages: %d
+                                Page size: %d
+                                First page: %b
+                                Last page: %b
+                                """,
+                        pagePostDto.getNumber(),              // Номер текущей страницы
+                        pagePostDto.getTotalPages(),          // Общее количество страниц
+                        pagePostDto.getTotalElements(),       // Общее количество элементов
+                        pagePostDto.getTotalPages(),          // Общее количество страниц
+                        pagePostDto.getSize(),                // Размер страницы (количество элементов на странице)
+                        pagePostDto.getFirst(),               // Это первая страница?
+                        pagePostDto.getLast()                 // Это последняя страница?
+                );
+
+                // Отправляем информацию о странице
+                sendMessage(chatId, pageInfo);
+
+                pagePostDto.getContent().stream()
+                        .map(this::formatPostMessage)
+                        .forEach(message -> sendMessage(chatId, message));
+
+            } else {
+                sendMessage(chatId, "Posts not found or post service is unavailable. Sucks!");
+            }
+
+        } else {
+            sendMessage(chatId, "Please login first.");
+        }
     }
 }
