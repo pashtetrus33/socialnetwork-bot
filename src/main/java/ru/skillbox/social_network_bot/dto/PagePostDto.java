@@ -32,7 +32,7 @@ public class PagePostDto {
 
     @NotNull
     @Min(0)
-    private Integer number;  // pageNumber
+    private Integer number;
 
     @NotNull
     @Min(1)

@@ -1,6 +1,7 @@
 package ru.skillbox.social_network_bot.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import feign.Feign;
 import feign.Logger;
 import feign.RequestInterceptor;
@@ -21,13 +22,12 @@ import ru.skillbox.social_network_bot.service.TokenService;
 @Slf4j
 @RequiredArgsConstructor
 @Configuration
-public class FreignClientsConfig {
-
+public class FeignClientsConfig {
 
     @Value("${gateway.api.url}")
     private String gatewayApiUrl;
 
-    ObjectMapper objectMapper = new ObjectMapper();
+    ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
     private final TokenService tokenService;
 
     @Bean

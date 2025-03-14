@@ -15,6 +15,7 @@ import ru.skillbox.social_network_bot.dto.*;
 import ru.skillbox.social_network_bot.entity.TelegramUser;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -256,13 +257,18 @@ public class TelegramBotService extends TelegramWebhookBot {
     }
 
     public String formatPostMessage(PostDto postDto) {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd MMMM yyyy, HH:mm");
+
         StringBuilder message = new StringBuilder();
-        message.append("📅 **Publish date:** ").append(postDto.getPublishDate()).append("\n");
-        message.append("📝 **Title:** ").append(postDto.getTitle()).append("\n");
-        message.append("✍️ **Text:**\n").append(postDto.getPostText()).append("\n");
+        message.append("📅 *Дата публикации:* ").append(postDto.getPublishDate().format(formatter)).append("\n\n");
+        message.append("📝 *").append(postDto.getTitle()).append("*\n\n");
+
+        // Очистка HTML-тегов, можно улучшить
+        String postText = postDto.getPostText().replaceAll("<[^>]*>", "").trim();
+        message.append("✍️ ").append(postText).append("\n\n");
 
         if (postDto.getImagePath() != null) {
-            message.append("🖼 **Image:** ").append(postDto.getImagePath()).append("\n");
+            message.append("🖼 [Фото](").append(postDto.getImagePath()).append(")\n");
         }
 
         return message.toString();
