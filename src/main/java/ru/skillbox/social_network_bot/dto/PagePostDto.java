@@ -1,7 +1,6 @@
 package ru.skillbox.social_network_bot.dto;
 
-import com.fasterxml.jackson.annotation.JsonAlias;
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import jakarta.validation.constraints.Min;
@@ -20,6 +19,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@JsonIgnoreProperties(ignoreUnknown = true)  // Игнорировать неизвестные поля
 public class PagePostDto {
 
     @NotNull
@@ -30,14 +30,9 @@ public class PagePostDto {
     @PositiveOrZero
     private Integer totalPages;
 
-
-    @JsonAlias({"pageNumber"}) // Поддерживает оба варианта: "number" и "pageNumber"
     @NotNull
     @Min(0)
-    private Integer number;
-
-    @JsonIgnore // Исключаем из сериализации, используется только для совместимости
-    private Integer pageNumber;
+    private Integer number;  // pageNumber
 
     @NotNull
     @Min(1)
@@ -63,4 +58,8 @@ public class PagePostDto {
 
     @NotNull
     private Boolean empty;
+
+    // Обрабатываем поля внутри Pageable
+    @JsonProperty("pageSize")  // Убедитесь, что это поле есть внутри pageable
+    private Integer pageSize;
 }
