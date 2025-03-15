@@ -413,8 +413,10 @@ public class TelegramBotService extends TelegramWebhookBot {
         message.append("✍️ ").append(postText).append("\n\n");
 
         if (postDto.getImagePath() != null) {
-            message.append("🖼 [Фото](").append(postDto.getImagePath()).append(")\n");
+            message.append("🖼 [Фото](").append(postDto.getImagePath()).append(")\n\n");
         }
+
+        message.append("🧑‍💻 *Автор: ").append(postDto.getAuthorId()).append("*\n\n");
 
         return message.toString();
     }
