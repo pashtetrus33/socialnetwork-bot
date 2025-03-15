@@ -124,6 +124,15 @@ public class TelegramBotService extends TelegramWebhookBot {
 
                     if (tokenValid(token)) {
                         sendMessage(chatId, "Token is valid.");
+                        try {
+                            sendMessage(chatId, "Username: " + jwtUtil.extractUsername(token));
+                            sendMessage(chatId, "UserId: " + jwtUtil.extractUserId(token));
+                        } catch (IllegalArgumentException e) {
+                            log.error(e.getMessage());
+                            sendMessage(chatId, "Invalid token. Please try again.");
+                            userSession.setState(UserState.DEFAULT);
+                            userSession.setAuthenticated(false);
+                        }
                     } else {
                         sendMessage(chatId, "Token is not valid. Please login first.");
                         userSession.setState(UserState.DEFAULT);
@@ -285,13 +294,18 @@ public class TelegramBotService extends TelegramWebhookBot {
         }
     }
 
-    private void getFriends(UserSession userSession, Long chatId, Boolean withFriends) {
+    private void getFriends(UserSession userSession, Long chatId, boolean withFriends) {
         // Запрос на получение постов друзей
         if (isAuthenticated(userSession, chatId)) {
-            sendMessage(chatId, "Ок. Let's go for the friends posts...");
+            if (Boolean.TRUE.equals(withFriends)) {
+                sendMessage(chatId, "Ок. Let's go for the friends posts...");
+            } else {
+                sendMessage(chatId, "Ок. Let's go for the all posts...");
+            }
+
 
             PostSearchDto postSearchDto = PostSearchDto.builder()
-                    .isDeleted(false)
+                    .isDeleted(null)
                     .withFriends(withFriends)
                     .build();
 
