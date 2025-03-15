@@ -70,10 +70,20 @@ public class TelegramBotService extends TelegramWebhookBot {
             userSession.setChatId(chatId);
 
             switch (text) {
-                case "/start":
-                    // Приветствие
-                    sendMessage(chatId, "Hi! How can I help you :)");
+                case "/help":
+                    // Приветствие и список доступных команд
+                    sendMessage(chatId, """
+                            Привет! Как дела? 😊
+                            
+                            Список доступных команд:
+                            /login - Вход в личный кабинет
+                            /create - Создать пост
+                            /friends_posts - Посты друзей
+                            /get_all - Все посты
+                            /validate - Проверить текущий токен
+                            """);
                     break;
+
 
                 case "/login":
                     // Начало процесса логина
@@ -86,15 +96,15 @@ public class TelegramBotService extends TelegramWebhookBot {
                     sendMessage(chatId, "Please enter your login:");
                     break;
 
-                case "/get_friends_posts":
+                case "/friends_posts":
                     getFriends(userSession, chatId, true);
                     break;
 
-                case "/get_all_posts":
+                case "/get_all":
                     getFriends(userSession, chatId, false);
                     break;
 
-                case "/create_post":
+                case "/create":
                     create(userSession, chatId);
                     break;
 
@@ -120,8 +130,13 @@ public class TelegramBotService extends TelegramWebhookBot {
                                 .postText(text)
                                 .build();
 
-                        Boolean isCreated = createPost(postDto);
-                        log.info("Post is created: {}", isCreated);
+                        boolean isCreated = createPost(postDto);
+
+                        if (isCreated) {
+                            sendMessage(chatId, "Post is created.");
+                        } else {
+                            sendMessage(chatId, "Post is not created.");
+                        }
                         userSession.setState(UserState.DEFAULT);
                     }
 
@@ -192,7 +207,7 @@ public class TelegramBotService extends TelegramWebhookBot {
 
 
     private boolean isAuthenticated(UserSession userSession) {
-        return userSession.isAuthenticated();
+        return userSession.isAuthenticated() && tokenValid(token);
     }
 
     private void sendMessage(Long chatId, String text) {
@@ -229,6 +244,7 @@ public class TelegramBotService extends TelegramWebhookBot {
             return authServiceClient.validateToken(token);
 
         } catch (FeignException e) {
+            log.error("Freign client exception while token validation: {}", e.getMessage());
             return false;
         }
     }
