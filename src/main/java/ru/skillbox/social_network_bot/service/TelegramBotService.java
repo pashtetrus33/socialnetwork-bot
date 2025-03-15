@@ -71,10 +71,10 @@ public class TelegramBotService extends TelegramWebhookBot {
             userSession.setChatId(chatId);
 
             switch (text) {
-                case "/help":
-                    // Приветствие и список доступных команд
+                case "/start":
+                    // Приветствие и список команд
                     sendMessage(chatId, """
-                            Привет! Как дела? 😊
+                            Привет! 😊 Я ваш бот и готов помочь!
                             
                             Список доступных команд:
                             /login - Вход в личный кабинет
@@ -82,6 +82,8 @@ public class TelegramBotService extends TelegramWebhookBot {
                             /friends_posts - Посты друзей
                             /get_all - Все посты
                             /validate - Проверить текущий токен
+                            
+                            Чем могу помочь? 🙂
                             """);
                     break;
 
