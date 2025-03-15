@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.bots.TelegramWebhookBot;
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.objects.Chat;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.User;
 import ru.skillbox.social_network_bot.client.AuthServiceClient;
@@ -206,7 +207,8 @@ public class TelegramBotService extends TelegramWebhookBot {
     }
 
 
-    private boolean isAuthenticated(UserSession userSession) {
+    private boolean isAuthenticated(UserSession userSession, Long chatId) {
+        sendMessage(chatId, "Token validation...");
         return userSession.isAuthenticated() && tokenValid(token);
     }
 
@@ -293,7 +295,7 @@ public class TelegramBotService extends TelegramWebhookBot {
 
     private void getFriends(UserSession userSession, Long chatId, Boolean withFriends) {
         // Запрос на получение постов друзей
-        if (isAuthenticated(userSession)) {
+        if (isAuthenticated(userSession, chatId)) {
             sendMessage(chatId, "Ок. Let's go for the friends posts...");
 
             PostSearchDto postSearchDto = PostSearchDto.builder()
