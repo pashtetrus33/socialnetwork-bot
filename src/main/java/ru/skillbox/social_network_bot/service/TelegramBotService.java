@@ -345,7 +345,7 @@ public class TelegramBotService extends TelegramWebhookBot {
 
     private void create(UserSession userSession, Long chatId) {
 
-        if (isAuthenticated(userSession)) {
+        if (isAuthenticated(userSession, chatId)) {
             userSession.setState(UserState.AWAITING_TITLE);
             sendMessage(chatId, "Please enter title:");
 
