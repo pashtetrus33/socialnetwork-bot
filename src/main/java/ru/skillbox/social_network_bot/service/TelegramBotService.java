@@ -7,18 +7,20 @@ import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.bots.TelegramWebhookBot;
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.objects.Chat;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.User;
 import ru.skillbox.social_network_bot.client.AuthServiceClient;
 import ru.skillbox.social_network_bot.client.PostServiceClient;
 import ru.skillbox.social_network_bot.dto.*;
 import ru.skillbox.social_network_bot.entity.TelegramUser;
+import ru.skillbox.social_network_bot.security.JwtUtil;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -32,16 +34,18 @@ public class TelegramBotService extends TelegramWebhookBot {
     private final PostServiceClient postServiceClient;
     private final TokenService tokenService;
     private String token;
+    private final JwtUtil jwtUtil;
 
 
     public TelegramBotService(@Value("${telegram.bot-token}") String botToken, AuthServiceClient authServiceClient,
-                              @Value("${telegram.bot-username}") String botUsername, TelegramUserService telegramUserService, PostServiceClient postServiceClient, TokenService tokenService) {
+                              @Value("${telegram.bot-username}") String botUsername, TelegramUserService telegramUserService, PostServiceClient postServiceClient, TokenService tokenService, JwtUtil jwtUtil) {
         super(botToken);
         this.authServiceClient = authServiceClient;
         this.botUsername = botUsername;
         this.telegramUserService = telegramUserService;
         this.postServiceClient = postServiceClient;
         this.tokenService = tokenService;
+        this.jwtUtil = jwtUtil;
     }
 
     @Override
@@ -80,6 +84,7 @@ public class TelegramBotService extends TelegramWebhookBot {
                             /login - Вход в личный кабинет
                             /create - Создать пост
                             /friends_posts - Посты друзей
+                            /my_posts - Мои посты
                             /get_all - Все посты
                             /validate - Проверить текущий токен
                             
@@ -101,6 +106,10 @@ public class TelegramBotService extends TelegramWebhookBot {
 
                 case "/friends_posts":
                     getFriends(userSession, chatId, true);
+                    break;
+
+                case "/my_posts":
+                    getOwn(userSession, chatId);
                     break;
 
                 case "/get_all":
@@ -208,7 +217,6 @@ public class TelegramBotService extends TelegramWebhookBot {
         return null;
     }
 
-
     private boolean isAuthenticated(UserSession userSession, Long chatId) {
         sendMessage(chatId, "Token validation...");
         return userSession.isAuthenticated() && tokenValid(token);
@@ -277,6 +285,108 @@ public class TelegramBotService extends TelegramWebhookBot {
         }
     }
 
+    private void getFriends(UserSession userSession, Long chatId, Boolean withFriends) {
+        // Запрос на получение постов друзей
+        if (isAuthenticated(userSession, chatId)) {
+            sendMessage(chatId, "Ок. Let's go for the friends posts...");
+
+            PostSearchDto postSearchDto = PostSearchDto.builder()
+                    .isDeleted(false)
+                    .withFriends(withFriends)
+                    .build();
+
+            PagePostDto pagePostDto = getPosts(postSearchDto);
+            log.info("PagePostDto: {}", pagePostDto);
+
+            extracted(chatId, pagePostDto);
+
+
+        } else {
+            sendMessage(chatId, "Please login first.");
+        }
+    }
+
+    private void create(UserSession userSession, Long chatId) {
+
+        if (isAuthenticated(userSession, chatId)) {
+            userSession.setState(UserState.AWAITING_TITLE);
+            sendMessage(chatId, "Please enter title:");
+
+        } else {
+            sendMessage(chatId, "Please login first.");
+        }
+    }
+
+    private void getOwn(UserSession userSession, Long chatId) {
+
+        if (isAuthenticated(userSession, chatId)) {
+
+            String userName;
+            UUID userId;
+
+            try {
+                userName = jwtUtil.extractUsername(token);
+                userId = jwtUtil.extractUserId(token);
+                sendMessage(chatId, "Username: " + userName);
+                sendMessage(chatId, "UserId: " + userId);
+            } catch (IllegalArgumentException e) {
+                log.error(e.getMessage());
+                sendMessage(chatId, "Invalid token. Please try again.");
+                userSession.setState(UserState.DEFAULT);
+                userSession.setAuthenticated(false);
+                return;
+            }
+            sendMessage(chatId, "Ок. Let's go for my own posts...");
+
+            PostSearchDto postSearchDto = PostSearchDto.builder()
+                    .isDeleted(false)
+                    .accountIds(Collections.singletonList(userId))
+                    .build();
+
+            PagePostDto pagePostDto = postServiceClient.getAll(postSearchDto);
+
+            extracted(chatId, pagePostDto);
+
+
+        } else {
+            sendMessage(chatId, "Please login first.");
+        }
+    }
+
+    private void extracted(Long chatId, PagePostDto pagePostDto) {
+        if (pagePostDto != null) {
+
+            // Выводим информацию о странице
+            String pageInfo = String.format(
+                    """
+                            Page: %d of %d
+                            Total elements: %d
+                            Total pages: %d
+                            Page size: %d
+                            First page: %b
+                            Last page: %b
+                            """,
+                    pagePostDto.getNumber(),              // Номер текущей страницы
+                    pagePostDto.getTotalPages(),          // Общее количество страниц
+                    pagePostDto.getTotalElements(),       // Общее количество элементов
+                    pagePostDto.getTotalPages(),          // Общее количество страниц
+                    pagePostDto.getSize(),                // Размер страницы (количество элементов на странице)
+                    pagePostDto.getFirst(),               // Это первая страница?
+                    pagePostDto.getLast()                 // Это последняя страница?
+            );
+
+            // Отправляем информацию о странице
+            sendMessage(chatId, pageInfo);
+
+            pagePostDto.getContent().stream()
+                    .map(this::formatPostMessage)
+                    .forEach(message -> sendMessage(chatId, message));
+
+        } else {
+            sendMessage(chatId, "Posts not found or post service is unavailable. Sucks!");
+        }
+    }
+
     public String formatPostMessage(PostDto postDto) {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd MMMM yyyy, HH:mm");
 
@@ -293,66 +403,5 @@ public class TelegramBotService extends TelegramWebhookBot {
         }
 
         return message.toString();
-    }
-
-    private void getFriends(UserSession userSession, Long chatId, Boolean withFriends) {
-        // Запрос на получение постов друзей
-        if (isAuthenticated(userSession, chatId)) {
-            sendMessage(chatId, "Ок. Let's go for the friends posts...");
-
-            PostSearchDto postSearchDto = PostSearchDto.builder()
-                    .isDeleted(false)
-                    .withFriends(withFriends)
-                    .build();
-
-            PagePostDto pagePostDto = getPosts(postSearchDto);
-            log.info("PagePostDto: {}", pagePostDto);
-
-            if (pagePostDto != null) {
-
-                // Выводим информацию о странице
-                String pageInfo = String.format(
-                        """
-                                Page: %d of %d
-                                Total elements: %d
-                                Total pages: %d
-                                Page size: %d
-                                First page: %b
-                                Last page: %b
-                                """,
-                        pagePostDto.getNumber(),              // Номер текущей страницы
-                        pagePostDto.getTotalPages(),          // Общее количество страниц
-                        pagePostDto.getTotalElements(),       // Общее количество элементов
-                        pagePostDto.getTotalPages(),          // Общее количество страниц
-                        pagePostDto.getSize(),                // Размер страницы (количество элементов на странице)
-                        pagePostDto.getFirst(),               // Это первая страница?
-                        pagePostDto.getLast()                 // Это последняя страница?
-                );
-
-                // Отправляем информацию о странице
-                sendMessage(chatId, pageInfo);
-
-                pagePostDto.getContent().stream()
-                        .map(this::formatPostMessage)
-                        .forEach(message -> sendMessage(chatId, message));
-
-            } else {
-                sendMessage(chatId, "Posts not found or post service is unavailable. Sucks!");
-            }
-
-        } else {
-            sendMessage(chatId, "Please login first.");
-        }
-    }
-
-    private void create(UserSession userSession, Long chatId) {
-
-        if (isAuthenticated(userSession, chatId)) {
-            userSession.setState(UserState.AWAITING_TITLE);
-            sendMessage(chatId, "Please enter title:");
-
-        } else {
-            sendMessage(chatId, "Please login first.");
-        }
     }
 }
