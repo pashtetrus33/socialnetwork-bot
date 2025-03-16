@@ -14,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import ru.skillbox.social_network_bot.client.AccountServiceClient;
 import ru.skillbox.social_network_bot.client.AuthServiceClient;
 import ru.skillbox.social_network_bot.client.PostServiceClient;
 import ru.skillbox.social_network_bot.service.TokenService;
@@ -47,7 +48,6 @@ public class FeignClientsConfig {
     }
 
 
-
     @Bean
     public Logger.Level feignLoggerLevel() {
         return Logger.Level.FULL;
@@ -75,6 +75,17 @@ public class FeignClientsConfig {
                 .logLevel(Logger.Level.FULL)
                 .requestInterceptor(requestInterceptor())
                 .target(PostServiceClient.class, gatewayApiUrl + "/api/v1/post");
+    }
+
+    @Bean
+    public AccountServiceClient accountServiceClient() {
+        return Feign.builder()
+                .encoder(jacksonEncoder())
+                .decoder(jacksonDecoder())
+                .logger(new feign.slf4j.Slf4jLogger(PostServiceClient.class))
+                .logLevel(Logger.Level.FULL)
+                .requestInterceptor(requestInterceptor())
+                .target(AccountServiceClient.class, gatewayApiUrl + "/api/v1/account");
     }
 
     // Бин для Jackson Encoder

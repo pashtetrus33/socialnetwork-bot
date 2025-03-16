@@ -9,6 +9,7 @@ import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.User;
+import ru.skillbox.social_network_bot.client.AccountServiceClient;
 import ru.skillbox.social_network_bot.client.AuthServiceClient;
 import ru.skillbox.social_network_bot.client.PostServiceClient;
 import ru.skillbox.social_network_bot.dto.*;
@@ -33,12 +34,13 @@ public class TelegramBotService extends TelegramWebhookBot {
     private final TelegramUserService telegramUserService;
     private final PostServiceClient postServiceClient;
     private final TokenService tokenService;
+    private final AccountServiceClient accountServiceClient;
     private String token;
     private final JwtUtil jwtUtil;
 
 
     public TelegramBotService(@Value("${telegram.bot-token}") String botToken, AuthServiceClient authServiceClient,
-                              @Value("${telegram.bot-username}") String botUsername, TelegramUserService telegramUserService, PostServiceClient postServiceClient, TokenService tokenService, JwtUtil jwtUtil) {
+                              @Value("${telegram.bot-username}") String botUsername, TelegramUserService telegramUserService, PostServiceClient postServiceClient, TokenService tokenService, JwtUtil jwtUtil, AccountServiceClient accountServiceClient) {
         super(botToken);
         this.authServiceClient = authServiceClient;
         this.botUsername = botUsername;
@@ -46,6 +48,7 @@ public class TelegramBotService extends TelegramWebhookBot {
         this.postServiceClient = postServiceClient;
         this.tokenService = tokenService;
         this.jwtUtil = jwtUtil;
+        this.accountServiceClient = accountServiceClient;
     }
 
     @Override
@@ -416,8 +419,30 @@ public class TelegramBotService extends TelegramWebhookBot {
             message.append("🖼 [Фото](").append(postDto.getImagePath()).append(")\n\n");
         }
 
-        message.append("🧑‍💻 *Автор: ").append(postDto.getAuthorId()).append("*\n\n");
+        AccountDto accountDto = getAccountInfo(postDto.getAuthorId());
+        log.warn("Trying to get account info {}", postDto.getAuthorId());
+
+        if (accountDto != null) {
+            message.append("🧑‍💻 *Автор:* ").append(accountDto.getFirstName()).append(" ").append(accountDto.getLastName()).append("\n\n")
+                    .append("📧 *Email:* ").append(accountDto.getEmail()).append("\n")
+                    .append("📍 *Город:* ").append(accountDto.getCity()).append("\n");
+
+
+        } else {
+            message.append("🧑‍💻 *Автор: ").append(postDto.getAuthorId()).append("*\n\n");
+        }
 
         return message.toString();
+    }
+
+    private AccountDto getAccountInfo(UUID accountId) {
+        try {
+            log.info("Getting account info {}", accountId);
+            return accountServiceClient.getAccountById(accountId);
+
+        } catch (FeignException e) {
+            log.error("Freign client exception while getting account info: {}", e.getMessage());
+            return null;
+        }
     }
 }
