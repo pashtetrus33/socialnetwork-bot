@@ -18,10 +18,7 @@ import ru.skillbox.social_network_bot.security.JwtUtil;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 @Slf4j
 @Service
@@ -121,6 +118,10 @@ public class TelegramBotService extends TelegramWebhookBot {
 
                 case "/create":
                     create(userSession, chatId);
+                    break;
+
+                case "/users":
+                    showUsers(userSession, chatId);
                     break;
 
                 case "/validate":
@@ -228,6 +229,7 @@ public class TelegramBotService extends TelegramWebhookBot {
         }
         return null;
     }
+
 
     private boolean isAuthenticated(UserSession userSession, Long chatId) {
         sendMessage(chatId, "Token validation...");
@@ -444,5 +446,54 @@ public class TelegramBotService extends TelegramWebhookBot {
             log.error("Freign client exception while getting account info: {}", e.getMessage());
             return null;
         }
+    }
+
+    private void showUsers(UserSession userSession, Long chatId) {
+        List<TelegramUser> users = telegramUserService.getAll();
+
+        if (users.isEmpty()) {
+            sendMessage(chatId, "🚫 Пользователи не найдены.");
+            return;
+        }
+
+        StringBuilder message = new StringBuilder("👥 *Список пользователей:*\n");
+        message.append("━━━━━━━━━━━━━━━━━━━━\n");
+
+        for (TelegramUser user : users) {
+            boolean isAuthenticated = userSession.isAuthenticated();
+            UserState state = userSession.getState();
+
+            message.append(String.format("""
+                🆔 *ID:* %s
+                🗣 *Имя:* %s %s
+                🔹 *Логин:* %s
+                📟 *Username:* %s
+                📞 *Телефон:* %s
+                🔄 *Статус:* %s
+                🌍 *Язык:* %s
+                🤖 *Бот:* %s
+                🔐 *Аутентификация:* %s
+                ⚙ *Состояние:* %s
+                📅 *Создан:* %s
+                🕒 *Обновлен:* %s
+                ━━━━━━━━━━━━━━━━━━━━
+                """,
+                    user.getId(),
+                    user.getFirstName(),
+                    user.getLastName() != null ? user.getLastName() : "",
+                    user.getLogin(),
+                    user.getUsername() != null ? user.getUsername() : "N/A",
+                    user.getPhoneNumber() != null ? user.getPhoneNumber() : "N/A",
+                    user.getIsActive() ? "✅ Активен" : "❌ Неактивен",
+                    user.getLanguageCode() != null ? user.getLanguageCode() : "N/A",
+                    user.getIsBot() != null && user.getIsBot() ? "🤖 Да" : "👤 Нет",
+                    isAuthenticated ? "✅ Да" : "❌ Нет",
+                    state != null ? state.name() : "UNKNOWN",
+                    user.getCreatedAt(),
+                    user.getUpdatedAt()
+            ));
+        }
+
+        sendMessage(chatId, message.toString());
     }
 }
