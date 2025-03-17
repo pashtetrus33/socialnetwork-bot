@@ -442,57 +442,12 @@ public class TelegramBotService extends TelegramWebhookBot {
         try {
             log.info("Getting account info {}", accountId);
             return accountServiceClient.getAccountById(accountId);
-
-<<<<<<< HEAD
-            PostSearchDto postSearchDto = PostSearchDto.builder()
-                    .isDeleted(false)
-                    .withFriends(withFriends)
-                    .build();
-
-            PagePostDto pagePostDto = getPosts(postSearchDto);
-            log.info("PagePostDto: {}", pagePostDto);
-
-            if (pagePostDto != null) {
-
-                // Выводим информацию о странице
-                String pageInfo = String.format(
-                        """
-                                Page: %d of %d
-                                Total elements: %d
-                                Total pages: %d
-                                Page size: %d
-                                First page: %b
-                                Last page: %b
-                                """,
-                        pagePostDto.getNumber(),              // Номер текущей страницы
-                        pagePostDto.getTotalPages(),          // Общее количество страниц
-                        pagePostDto.getTotalElements(),       // Общее количество элементов
-                        pagePostDto.getTotalPages(),          // Общее количество страниц
-                        pagePostDto.getSize(),                // Размер страницы (количество элементов на странице)
-                        pagePostDto.getFirst(),               // Это первая страница?
-                        pagePostDto.getLast()                 // Это последняя страница?
-                );
-
-                // Отправляем информацию о странице
-                sendMessage(chatId, pageInfo);
-
-                pagePostDto.getContent().stream()
-                        .map(this::formatPostMessage)
-                        .forEach(message -> sendMessage(chatId, message));
-
-            } else {
-                sendMessage(chatId, "Posts not found or post service is unavailable. Sucks!");
-            }
-
-        } else {
-            sendMessage(chatId, PLEASE_LOGIN_FIRST);
-=======
         } catch (FeignException e) {
-            log.error("Freign client exception while getting account info: {}", e.getMessage());
+            log.error("Ошибка Feign клиента при получении информации об аккаунте: {}", e.getMessage());
             return null;
->>>>>>> 30d738200c8c109387b0f7e6e1302531d23d45c6
         }
     }
+
 
     private void showUsers(UserSession userSession, Long chatId) {
         List<TelegramUser> users = telegramUserService.getAll();
