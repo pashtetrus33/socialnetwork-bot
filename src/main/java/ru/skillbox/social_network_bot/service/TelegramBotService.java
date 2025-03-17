@@ -23,6 +23,7 @@ import java.util.Map;
 @Service
 public class TelegramBotService extends TelegramWebhookBot {
 
+    public static final String PLEASE_LOGIN_FIRST = "Please login first.";
     private final AuthServiceClient authServiceClient;
 
     private final Map<Long, UserSession> userSessions = new HashMap<>();
@@ -289,7 +290,7 @@ public class TelegramBotService extends TelegramWebhookBot {
             }
 
         } else {
-            sendMessage(chatId, "Please login first.");
+            sendMessage(chatId, PLEASE_LOGIN_FIRST);
         }
     }
 }
