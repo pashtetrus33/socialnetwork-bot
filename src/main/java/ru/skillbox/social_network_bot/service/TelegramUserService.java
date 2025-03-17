@@ -7,6 +7,8 @@ import org.springframework.stereotype.Service;
 import ru.skillbox.social_network_bot.entity.TelegramUser;
 import ru.skillbox.social_network_bot.repository.TelegramUserRepository;
 
+import java.util.List;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -20,5 +22,9 @@ public class TelegramUserService {
 
     public TelegramUser findByChatId(Long chatId) {
         return telegramUserRepository.findByChatId(chatId).orElse(null);
+    }
+
+    public List<TelegramUser> getAll() {
+        return telegramUserRepository.findAll();
     }
 }
