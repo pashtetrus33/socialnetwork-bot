@@ -49,10 +49,18 @@ public class FeignClientsConfig {
 
 
     @Bean
+    public RequestInterceptor requestAuthInterceptor() {
+        return requestTemplate -> {
+            requestTemplate.header("Accept", "application/json");
+            requestTemplate.header("Telegram", String.valueOf(tokenService.getChatId()));
+        };
+    }
+
+
+    @Bean
     public Logger.Level feignLoggerLevel() {
         return Logger.Level.FULL;
     }
-
 
     // Бин для AuthServiceClient
     @Bean
@@ -62,9 +70,9 @@ public class FeignClientsConfig {
                 .decoder(new JacksonDecoder())
                 .logger(new feign.slf4j.Slf4jLogger(AuthServiceClient.class))
                 .logLevel(Logger.Level.FULL)
+                .requestInterceptor(requestAuthInterceptor())
                 .target(AuthServiceClient.class, gatewayApiUrl + "/api/v1/auth");
     }
-
 
     @Bean
     public PostServiceClient postServiceClient() {

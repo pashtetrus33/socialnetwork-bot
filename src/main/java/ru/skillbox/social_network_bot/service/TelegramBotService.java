@@ -25,8 +25,8 @@ import java.util.*;
 public class TelegramBotService extends TelegramWebhookBot {
 
     public static final String PLEASE_LOGIN_FIRST = "Please login first.";
+    private static final String FAKE_PASSWORD = "123456789";
     private final AuthServiceClient authServiceClient;
-
     private final Map<Long, UserSession> userSessions = new HashMap<>();
     private final String botUsername;
     private final TelegramUserService telegramUserService;
@@ -67,6 +67,8 @@ public class TelegramBotService extends TelegramWebhookBot {
             User user = update.getMessage().getFrom();
             Long chatId = update.getMessage().getChatId();
             String text = update.getMessage().getText();
+
+            tokenService.setChatId(chatId);
 
             if (update.hasMessage() && update.getMessage().hasContact()) {
                 phoneNumber = update.getMessage().getContact().getPhoneNumber();
@@ -169,8 +171,17 @@ public class TelegramBotService extends TelegramWebhookBot {
                     // Обработка ввода логина и пароля
                     if (userSession.getState() == UserState.AWAITING_LOGIN) {
                         userSession.setLogin(text);
-                        userSession.setState(UserState.AWAITING_PASSWORD);
-                        sendMessage(chatId, "Please enter your password:");
+
+                        if (authenticateUser(userSession.getLogin(), FAKE_PASSWORD)) {
+                            sendMessage(chatId, "Successful authorization without password!\nAccess token: " + token);
+                            tokenService.setToken(token);
+                            userSession.setAuthenticated(true);
+                        } else {
+                            sendMessage(chatId, "Failed authorization without password!");
+                            userSession.setState(UserState.AWAITING_PASSWORD);
+                            sendMessage(chatId, "Please enter your password:");
+                        }
+
                     } else if (userSession.getState() == UserState.AWAITING_PASSWORD) {
                         userSession.setPassword(text);
                         String login = userSession.getLogin();
@@ -369,7 +380,7 @@ public class TelegramBotService extends TelegramWebhookBot {
 
 
         } else {
-            sendMessage(chatId, "Please login first.");
+            sendMessage(chatId, PLEASE_LOGIN_FIRST);
         }
     }
 
@@ -465,20 +476,20 @@ public class TelegramBotService extends TelegramWebhookBot {
             UserState state = userSession.getState();
 
             message.append(String.format("""
-                🆔 *ID:* %s
-                🗣 *Имя:* %s %s
-                🔹 *Логин:* %s
-                📟 *Username:* %s
-                📞 *Телефон:* %s
-                🔄 *Статус:* %s
-                🌍 *Язык:* %s
-                🤖 *Бот:* %s
-                🔐 *Аутентификация:* %s
-                ⚙ *Состояние:* %s
-                📅 *Создан:* %s
-                🕒 *Обновлен:* %s
-                ━━━━━━━━━━━━━━━━━━━━
-                """,
+                            🆔 *ID:* %s
+                            🗣 *Имя:* %s %s
+                            🔹 *Логин:* %s
+                            📟 *Username:* %s
+                            📞 *Телефон:* %s
+                            🔄 *Статус:* %s
+                            🌍 *Язык:* %s
+                            🤖 *Бот:* %s
+                            🔐 *Аутентификация:* %s
+                            ⚙ *Состояние:* %s
+                            📅 *Создан:* %s
+                            🕒 *Обновлен:* %s
+                            ━━━━━━━━━━━━━━━━━━━━
+                            """,
                     user.getId(),
                     user.getFirstName(),
                     user.getLastName() != null ? user.getLastName() : "",
