@@ -34,7 +34,6 @@ public class TelegramBotService extends TelegramWebhookBot {
     private final TokenService tokenService;
     private final AccountServiceClient accountServiceClient;
     private final JwtUtil jwtUtil;
-    private boolean firstTry = true;
 
 
     public TelegramBotService(@Value("${telegram.bot-token}") String botToken, AuthServiceClient authServiceClient,
@@ -88,7 +87,8 @@ public class TelegramBotService extends TelegramWebhookBot {
                             Привет! 😊 Я ваш бот и готов помочь!
                             
                             Список доступных команд:
-                            /login - Вход в личный кабинет
+                            /login - Вход без пароля
+                            /signin - Вход по паролю
                             /create - Создать пост
                             /friends_posts - Посты друзей
                             /my_posts - Мои посты
@@ -105,7 +105,17 @@ public class TelegramBotService extends TelegramWebhookBot {
                     if (tokenService.getTokens().get(chatId) != null) {
                         tokenService.getTokens().put(chatId, null);
                         sendMessage(chatId, "Current access token is deleted for chatId " + chatId);
-                        firstTry = true;
+                    }
+
+                    userSession.setState(UserState.AWAITING_LOGIN_WITHOUTPASSWORD);
+                    sendMessage(chatId, "Please enter your login:");
+                    break;
+
+                case "/signin":
+                    // Начало процесса логина
+                    if (tokenService.getTokens().get(chatId) != null) {
+                        tokenService.getTokens().put(chatId, null);
+                        sendMessage(chatId, "Current access token is deleted for chatId " + chatId);
                     }
 
                     userSession.setState(UserState.AWAITING_LOGIN);
@@ -178,25 +188,25 @@ public class TelegramBotService extends TelegramWebhookBot {
 
                     // Обработка ввода логина и пароля
                     if (userSession.getState() == UserState.AWAITING_LOGIN) {
+
                         userSession.setLogin(text);
 
-                        if (firstTry) {
+                        userSession.setState(UserState.AWAITING_PASSWORD);
+                        sendMessage(chatId, "Please enter your password:");
 
-                            accessToken = authenticateUser(userSession.getLogin(), FAKE_PASSWORD);
 
-                            if (accessToken != null) {
-                                sendMessage(chatId, "Successful authorization without password! Token: " + accessToken);
-                                tokenService.getTokens().put(chatId, accessToken);
-                                userSession.setAuthenticated(true);
+                    } else if (userSession.getState() == UserState.AWAITING_LOGIN_WITHOUTPASSWORD) {
 
-                            } else {
-                                userSession.setState(UserState.DEFAULT);
-                                sendMessage(chatId, "Failed authorization without password!");
-                                firstTry = false;
-                            }
+                        accessToken = authenticateUser(userSession.getLogin(), FAKE_PASSWORD);
+
+                        if (accessToken != null) {
+                            sendMessage(chatId, "Successful authorization without password! Token: " + accessToken);
+                            tokenService.getTokens().put(chatId, accessToken);
+                            userSession.setAuthenticated(true);
+
                         } else {
-                            userSession.setState(UserState.AWAITING_PASSWORD);
-                            sendMessage(chatId, "Please enter your password:");
+                            userSession.setState(UserState.DEFAULT);
+                            sendMessage(chatId, "Failed authorization without password!");
                         }
 
                     } else if (userSession.getState() == UserState.AWAITING_PASSWORD) {
