@@ -185,10 +185,10 @@ public class TelegramBotService extends TelegramWebhookBot {
                                 sendMessage(chatId, "Failed authorization without password!");
                                 firstTry = false;
                             }
+                        } else {
+                            userSession.setState(UserState.AWAITING_PASSWORD);
+                            sendMessage(chatId, "Please enter your password:");
                         }
-
-                        userSession.setState(UserState.AWAITING_PASSWORD);
-                        sendMessage(chatId, "Please enter your password:");
 
                     } else if (userSession.getState() == UserState.AWAITING_PASSWORD) {
                         userSession.setPassword(text);
