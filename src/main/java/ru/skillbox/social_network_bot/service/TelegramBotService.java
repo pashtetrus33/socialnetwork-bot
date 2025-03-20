@@ -445,6 +445,7 @@ public class TelegramBotService extends TelegramWebhookBot {
         } else {
             message.append("🧑‍💻 *Автор: ").append(postDto.getAuthorId()).append("*\n\n");
         }
+        message.append("━━━━━━━━━━━━━━━━━━━━\n");
 
         return message.toString();
     }
