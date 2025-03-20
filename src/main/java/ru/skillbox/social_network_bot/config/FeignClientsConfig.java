@@ -37,8 +37,7 @@ public class FeignClientsConfig {
             requestTemplate.header("Accept", "application/json");
 
             // Получаем токен КАЖДЫЙ РАЗ перед отправкой запроса
-            Long chatId = tokenService.getChatId();
-            String token = tokenService.getTokens().get(chatId);
+            String token = tokenService.getTokens().get(tokenService.getChatId());
 
             if (token != null && !token.isEmpty()) {
                 requestTemplate.header("Authorization", "Bearer " + token);
@@ -53,8 +52,8 @@ public class FeignClientsConfig {
     public RequestInterceptor requestAuthInterceptor() {
         return requestTemplate -> {
             requestTemplate.header("Accept", "application/json");
-            Long chatId = tokenService.getChatId();
-            requestTemplate.header("Telegram", String.valueOf(tokenService.getTokens().get(chatId)));
+
+            requestTemplate.header("Telegram", String.valueOf(tokenService.getChatId()));
         };
     }
 
