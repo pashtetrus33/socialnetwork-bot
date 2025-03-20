@@ -33,13 +33,13 @@ public class TelegramBotService extends TelegramWebhookBot {
     private final PostServiceClient postServiceClient;
     private final TokenService tokenService;
     private final AccountServiceClient accountServiceClient;
-    private String token;
     private final JwtUtil jwtUtil;
     private boolean firstTry = true;
 
 
     public TelegramBotService(@Value("${telegram.bot-token}") String botToken, AuthServiceClient authServiceClient,
-                              @Value("${telegram.bot-username}") String botUsername, TelegramUserService telegramUserService, PostServiceClient postServiceClient, TokenService tokenService, JwtUtil jwtUtil, AccountServiceClient accountServiceClient) {
+                              @Value("${telegram.bot-username}") String botUsername, TelegramUserService telegramUserService, PostServiceClient postServiceClient,
+                              TokenService tokenService, JwtUtil jwtUtil, AccountServiceClient accountServiceClient) {
         super(botToken);
         this.authServiceClient = authServiceClient;
         this.botUsername = botUsername;
@@ -62,6 +62,9 @@ public class TelegramBotService extends TelegramWebhookBot {
 
     @Override
     public BotApiMethod<?> onWebhookUpdateReceived(Update update) {
+
+        String accessToken;
+
         if (update.hasMessage() && update.getMessage().hasText()) {
 
             String phoneNumber = "No phone number";
@@ -99,9 +102,9 @@ public class TelegramBotService extends TelegramWebhookBot {
 
                 case "/login":
                     // Начало процесса логина
-                    if (token != null) {
-                        token = null;
-                        sendMessage(chatId, "Current access token is deleted.");
+                    if (tokenService.getTokens().get(chatId) != null) {
+                        tokenService.getTokens().put(chatId, null);
+                        sendMessage(chatId, "Current access token is deleted for chatId " + chatId);
                         firstTry = true;
                     }
 
@@ -131,11 +134,14 @@ public class TelegramBotService extends TelegramWebhookBot {
 
                 case "/validate":
 
-                    if (tokenValid(token)) {
-                        sendMessage(chatId, "Token is valid.");
+                    accessToken = tokenService.getTokens().get(chatId);
+                    sendMessage(chatId, "Token validation for token " + accessToken + " chatId " + chatId);
+
+                    if (tokenValid(accessToken)) {
+                        sendMessage(chatId, "Token is valid for chatId " + chatId);
                         try {
-                            sendMessage(chatId, "Username: " + jwtUtil.extractUsername(token));
-                            sendMessage(chatId, "UserId: " + jwtUtil.extractUserId(token));
+                            sendMessage(chatId, "Username: " + jwtUtil.extractUsername(accessToken));
+                            sendMessage(chatId, "UserId: " + jwtUtil.extractUserId(accessToken));
                         } catch (IllegalArgumentException e) {
                             log.error(e.getMessage());
                             sendMessage(chatId, "Invalid token. Please try again.");
@@ -175,9 +181,12 @@ public class TelegramBotService extends TelegramWebhookBot {
                         userSession.setLogin(text);
 
                         if (firstTry) {
-                            if (authenticateUser(userSession.getLogin(), FAKE_PASSWORD)) {
-                                sendMessage(chatId, "Successful authorization without password!\nAccess token: " + token);
-                                tokenService.setToken(token);
+
+                            accessToken = authenticateUser(userSession.getLogin(), FAKE_PASSWORD);
+
+                            if (accessToken != null) {
+                                sendMessage(chatId, "Successful authorization without password! Token: " + accessToken);
+                                tokenService.getTokens().put(chatId, accessToken);
                                 userSession.setAuthenticated(true);
 
                             } else {
@@ -195,9 +204,11 @@ public class TelegramBotService extends TelegramWebhookBot {
                         String login = userSession.getLogin();
                         String password = userSession.getPassword();
 
-                        if (authenticateUser(login, password)) {
-                            sendMessage(chatId, "Successful authorization!\nAccess token: " + token);
-                            tokenService.setToken(token);
+                        accessToken = authenticateUser(login, password);
+
+                        if (accessToken != null) {
+                            sendMessage(chatId, "Successful authorization!\nAccess token: " + accessToken);
+                            tokenService.getTokens().put(chatId, accessToken);
                             userSession.setAuthenticated(true);
                             TelegramUser telegramUser = TelegramUser.builder()
                                     .chatId(chatId)
@@ -253,7 +264,7 @@ public class TelegramBotService extends TelegramWebhookBot {
 
     private boolean isAuthenticated(UserSession userSession, Long chatId) {
         sendMessage(chatId, "Token validation...");
-        return userSession.isAuthenticated() && tokenValid(token);
+        return userSession.isAuthenticated() && tokenValid(tokenService.getTokens().get(chatId));
     }
 
     private void sendMessage(Long chatId, String text) {
@@ -267,7 +278,9 @@ public class TelegramBotService extends TelegramWebhookBot {
         }
     }
 
-    private boolean authenticateUser(String login, String password) {
+    private String authenticateUser(String login, String password) {
+
+        String accessToken;
 
         try {
             AuthenticateRq authenticateRq = new AuthenticateRq();
@@ -276,13 +289,13 @@ public class TelegramBotService extends TelegramWebhookBot {
 
             log.info("AuthenticateRq: {}", authenticateRq);
 
-            token = authServiceClient.login(authenticateRq).getAccessToken();
+            accessToken = authServiceClient.login(authenticateRq).getAccessToken();
 
         } catch (FeignException e) {
-            return false;
+            return null;
         }
 
-        return true;
+        return accessToken;
     }
 
     private boolean tokenValid(String token) {
@@ -364,8 +377,9 @@ public class TelegramBotService extends TelegramWebhookBot {
             UUID userId;
 
             try {
-                userName = jwtUtil.extractUsername(token);
-                userId = jwtUtil.extractUserId(token);
+                String accessToken = tokenService.getTokens().get(chatId);
+                userName = jwtUtil.extractUsername(accessToken);
+                userId = jwtUtil.extractUserId(accessToken);
                 sendMessage(chatId, "Username: " + userName);
                 sendMessage(chatId, "UserId: " + userId);
             } catch (IllegalArgumentException e) {
@@ -453,7 +467,7 @@ public class TelegramBotService extends TelegramWebhookBot {
         } else {
             message.append("🧑‍💻 *Автор: ").append(postDto.getAuthorId()).append("*\n\n");
         }
-        message.append("━━━━━━━━━━━━━━━━━━━━\n");
+        message.append("━━━━━━━━━━━━━━━\n");
 
         return message.toString();
     }
