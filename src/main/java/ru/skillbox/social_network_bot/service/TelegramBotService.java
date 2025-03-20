@@ -197,6 +197,8 @@ public class TelegramBotService extends TelegramWebhookBot {
 
                     } else if (userSession.getState() == UserState.AWAITING_LOGIN_WITHOUTPASSWORD) {
 
+                        userSession.setLogin(text);
+
                         accessToken = authenticateUser(userSession.getLogin(), FAKE_PASSWORD);
 
                         if (accessToken != null) {
