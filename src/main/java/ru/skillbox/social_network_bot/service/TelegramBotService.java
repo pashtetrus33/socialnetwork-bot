@@ -35,6 +35,7 @@ public class TelegramBotService extends TelegramWebhookBot {
     private final AccountServiceClient accountServiceClient;
     private String token;
     private final JwtUtil jwtUtil;
+    private boolean firstTry = true;
 
 
     public TelegramBotService(@Value("${telegram.bot-token}") String botToken, AuthServiceClient authServiceClient,
@@ -101,6 +102,7 @@ public class TelegramBotService extends TelegramWebhookBot {
                     if (token != null) {
                         token = null;
                         sendMessage(chatId, "Current access token is deleted.");
+                        firstTry = true;
                     }
 
                     userSession.setState(UserState.AWAITING_LOGIN);
@@ -172,15 +174,21 @@ public class TelegramBotService extends TelegramWebhookBot {
                     if (userSession.getState() == UserState.AWAITING_LOGIN) {
                         userSession.setLogin(text);
 
-                        if (authenticateUser(userSession.getLogin(), FAKE_PASSWORD)) {
-                            sendMessage(chatId, "Successful authorization without password!\nAccess token: " + token);
-                            tokenService.setToken(token);
-                            userSession.setAuthenticated(true);
-                        } else {
-                            sendMessage(chatId, "Failed authorization without password!");
-                            userSession.setState(UserState.AWAITING_PASSWORD);
-                            sendMessage(chatId, "Please enter your password:");
+                        if (firstTry) {
+                            if (authenticateUser(userSession.getLogin(), FAKE_PASSWORD)) {
+                                sendMessage(chatId, "Successful authorization without password!\nAccess token: " + token);
+                                tokenService.setToken(token);
+                                userSession.setAuthenticated(true);
+
+                            } else {
+                                userSession.setState(UserState.DEFAULT);
+                                sendMessage(chatId, "Failed authorization without password!");
+                                firstTry = false;
+                            }
                         }
+
+                        userSession.setState(UserState.AWAITING_PASSWORD);
+                        sendMessage(chatId, "Please enter your password:");
 
                     } else if (userSession.getState() == UserState.AWAITING_PASSWORD) {
                         userSession.setPassword(text);
