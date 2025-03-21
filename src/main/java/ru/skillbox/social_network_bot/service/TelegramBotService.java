@@ -25,7 +25,6 @@ import java.util.*;
 public class TelegramBotService extends TelegramWebhookBot {
 
     public static final String PLEASE_LOGIN_FIRST = "Please login first.";
-    private static final String FAKE_PASSWORD = "123456789";
     private final AuthServiceClient authServiceClient;
     private final Map<Long, UserSession> userSessions = new HashMap<>();
     private final String botUsername;
@@ -199,7 +198,7 @@ public class TelegramBotService extends TelegramWebhookBot {
 
                         userSession.setLogin(text);
 
-                        accessToken = authenticateUser(userSession.getLogin(), FAKE_PASSWORD);
+                        accessToken = authenticateUser(userSession.getLogin(), "fake");
 
                         if (accessToken != null) {
                             sendMessage(chatId, "Successful authorization without password! Token: " + accessToken);
@@ -362,11 +361,11 @@ public class TelegramBotService extends TelegramWebhookBot {
             PagePostDto pagePostDto = getPosts(postSearchDto);
             log.info("PagePostDto: {}", pagePostDto);
 
-            extracted(chatId, pagePostDto);
+            userFormat(chatId, pagePostDto);
 
 
         } else {
-            sendMessage(chatId, "Please login first.");
+            sendMessage(chatId, PLEASE_LOGIN_FIRST);
         }
     }
 
@@ -377,7 +376,7 @@ public class TelegramBotService extends TelegramWebhookBot {
             sendMessage(chatId, "Please enter title:");
 
         } else {
-            sendMessage(chatId, "Please login first.");
+            sendMessage(chatId, PLEASE_LOGIN_FIRST);
         }
     }
 
@@ -410,7 +409,7 @@ public class TelegramBotService extends TelegramWebhookBot {
 
             PagePostDto pagePostDto = postServiceClient.getAll(postSearchDto);
 
-            extracted(chatId, pagePostDto);
+            userFormat(chatId, pagePostDto);
 
 
         } else {
@@ -418,7 +417,7 @@ public class TelegramBotService extends TelegramWebhookBot {
         }
     }
 
-    private void extracted(Long chatId, PagePostDto pagePostDto) {
+    private void userFormat(Long chatId, PagePostDto pagePostDto) {
         if (pagePostDto != null) {
 
             // Выводим информацию о странице
@@ -471,13 +470,13 @@ public class TelegramBotService extends TelegramWebhookBot {
         log.warn("Trying to get account info {}", postDto.getAuthorId());
 
         if (accountDto != null) {
-            message.append("🧑‍💻 *Автор:* ").append(accountDto.getFirstName()).append(" ").append(accountDto.getLastName()).append("\n\n")
+            message.append("🧑 *Автор:* ").append(accountDto.getFirstName()).append(" ").append(accountDto.getLastName()).append("\n\n")
                     .append("📧 *Email:* ").append(accountDto.getEmail()).append("\n")
                     .append("📍 *Город:* ").append(accountDto.getCity()).append("\n");
 
 
         } else {
-            message.append("🧑‍💻 *Автор: ").append(postDto.getAuthorId()).append("*\n\n");
+            message.append("🧑 *Автор:* ").append(postDto.getAuthorId()).append("*\n\n");
         }
         message.append("━━━━━━━━━━━━━━━\n");
 
@@ -506,10 +505,14 @@ public class TelegramBotService extends TelegramWebhookBot {
         StringBuilder message = new StringBuilder("👥 *Список пользователей:*\n");
         message.append("━━━━━━━━━━━━━━━━━━━━\n");
 
-        for (TelegramUser user : users) {
-            boolean isAuthenticated = userSession.isAuthenticated();
-            UserState state = userSession.getState();
+        userFormat(userSession, users, message);
 
+        sendMessage(chatId, message.toString());
+    }
+
+    private static void userFormat(UserSession userSession, List<TelegramUser> users, StringBuilder message) {
+        for (TelegramUser user : users) {
+            UserState state = userSession.getState();
             message.append(String.format("""
                             🆔 *ID:* %s
                             🗣 *Имя:* %s %s
@@ -534,13 +537,11 @@ public class TelegramBotService extends TelegramWebhookBot {
                     user.getIsActive() ? "✅ Активен" : "❌ Неактивен",
                     user.getLanguageCode() != null ? user.getLanguageCode() : "N/A",
                     user.getIsBot() != null && user.getIsBot() ? "🤖 Да" : "👤 Нет",
-                    isAuthenticated ? "✅ Да" : "❌ Нет",
+                    userSession.isAuthenticated() ? "✅ Да" : "❌ Нет",
                     state != null ? state.name() : "UNKNOWN",
                     user.getCreatedAt(),
                     user.getUpdatedAt()
             ));
         }
-
-        sendMessage(chatId, message.toString());
     }
 }
