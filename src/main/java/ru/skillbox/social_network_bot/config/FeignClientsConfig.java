@@ -5,6 +5,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import feign.Feign;
 import feign.Logger;
 import feign.RequestInterceptor;
+import feign.RequestTemplate;
 import feign.codec.Decoder;
 import feign.codec.Encoder;
 import feign.jackson.JacksonDecoder;
@@ -44,6 +45,8 @@ public class FeignClientsConfig {
             } else {
                 log.warn("Токен отсутствует! Запрос может завершиться ошибкой 401.");
             }
+
+            logRequest(requestTemplate);
         };
     }
 
@@ -54,6 +57,8 @@ public class FeignClientsConfig {
             requestTemplate.header("Accept", "application/json");
 
             requestTemplate.header("Telegram", String.valueOf(tokenService.getChatId()));
+
+            logRequest(requestTemplate);
         };
     }
 
@@ -108,5 +113,11 @@ public class FeignClientsConfig {
     public Decoder jacksonDecoder() {
 
         return new JacksonDecoder(objectMapper);
+    }
+
+
+    private static void logRequest(RequestTemplate requestTemplate) {
+        log.warn("Sending request to URL: {} with method: {} and headers: {}",
+                requestTemplate.url(), requestTemplate.method(), requestTemplate.headers());
     }
 }
