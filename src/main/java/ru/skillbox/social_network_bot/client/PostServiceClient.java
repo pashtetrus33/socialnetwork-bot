@@ -15,7 +15,7 @@ public interface PostServiceClient {
     //@RequestLine("GET")
     //PagePostDto getAll(@QueryMap PostSearchDto postSearchDto);
 
-    @RequestLine("GET /?isDeleted={isDeleted}&withFriends={withFriends}&accountIds={accountIds}&sort={sort}&direction={direction}&page={page}&size={size}")
+    @RequestLine("GET ?isDeleted={isDeleted}&withFriends={withFriends}&accountIds={accountIds}&sort={sort}&direction={direction}&page={page}&size={size}")
     PagePostDto getAll(@Param("isDeleted") Boolean isDeleted,
                        @Param("withFriends") Boolean withFriends,
                        @Param("accountIds") List<UUID> accountIds,
@@ -23,6 +23,7 @@ public interface PostServiceClient {
                        @Param("direction") String direction,
                        @Param("page") int page,
                        @Param("size") int size);
+
 
 
     @RequestLine("POST")
