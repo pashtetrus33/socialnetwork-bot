@@ -1,6 +1,7 @@
 package ru.skillbox.social_network_bot.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
@@ -49,6 +50,7 @@ public class PagePostDto {
     @Min(0)
     private Integer numberOfElements;
 
+    @JsonProperty("pageable")
     private Pageable pageable;
 
     @NotNull
