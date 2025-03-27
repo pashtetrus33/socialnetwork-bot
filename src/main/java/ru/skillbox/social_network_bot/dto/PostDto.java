@@ -1,8 +1,11 @@
 package ru.skillbox.social_network_bot.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import jakarta.validation.constraints.*;
 import lombok.*;
+import ru.skillbox.social_network_bot.config.LocalDateTimeDeserializer;
+import ru.skillbox.social_network_bot.config.SortDeserializer;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -20,8 +23,10 @@ public class PostDto {
 
     private UUID id;
 
+    @JsonDeserialize(using = LocalDateTimeDeserializer.class)
     private LocalDateTime time;
 
+    @JsonDeserialize(using = LocalDateTimeDeserializer.class)
     private LocalDateTime timeChanged;
 
     private UUID authorId;
@@ -68,5 +73,6 @@ public class PostDto {
     @Size(max = 512, message = "Image path must not exceed 512 characters")
     private String imagePath;
 
+    @JsonDeserialize(using = LocalDateTimeDeserializer.class)
     private LocalDateTime publishDate;
 }
