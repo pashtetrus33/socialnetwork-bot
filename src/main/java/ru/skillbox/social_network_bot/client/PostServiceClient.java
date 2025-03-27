@@ -7,7 +7,6 @@ import feign.RequestLine;
 import ru.skillbox.social_network_bot.dto.PagePostDto;
 import ru.skillbox.social_network_bot.dto.PostDto;
 import ru.skillbox.social_network_bot.dto.PostSearchDto;
-import ru.skillbox.social_network_bot.dto.SortDto;
 
 
 public interface PostServiceClient {
@@ -16,12 +15,12 @@ public interface PostServiceClient {
     //PagePostDto getAll(@QueryMap PostSearchDto postSearchDto);
 
     @RequestLine("GET")
-    PagePostDto getAll(
-            @QueryMap PostSearchDto postSearchDto,
-            @QueryMap SortDto sortDto,
-            @Param("page") int page,
-            @Param("size") int size
-    );
+    PagePostDto getAll(@QueryMap PostSearchDto postSearchDto,
+                       @Param("sort") String sort,
+                       @Param("direction") String direction,
+                       @Param("page") int page,
+                       @Param("size") int size);
+
 
     @RequestLine("POST")
     @Headers("Content-Type: application/json")
