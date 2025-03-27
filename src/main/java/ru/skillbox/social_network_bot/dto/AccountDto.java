@@ -1,12 +1,12 @@
 package ru.skillbox.social_network_bot.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.ZonedDateTime;
 import java.util.UUID;
 
@@ -14,6 +14,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class AccountDto {
 
     private UUID id;
@@ -38,4 +39,5 @@ public class AccountDto {
     private ZonedDateTime updatedOn;
     private String password;
     private String emojiStatus;
+    private String profileCover;
 }
