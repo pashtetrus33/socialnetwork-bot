@@ -1,31 +1,27 @@
 package ru.skillbox.social_network_bot.dto;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import jakarta.validation.constraints.*;
 import lombok.*;
-import ru.skillbox.social_network_bot.config.LocalDateTimeDeserializer;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
+
+@JsonIgnoreProperties(ignoreUnknown = true)  // Игнорировать неизвестные поля
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode
 @Builder
-@JsonIgnoreProperties(ignoreUnknown = true)  // Игнорировать неизвестные поля
 public class PostDto {
 
     private UUID id;
 
-    @JsonDeserialize(using = LocalDateTimeDeserializer.class)
     private LocalDateTime time;
 
-    @JsonDeserialize(using = LocalDateTimeDeserializer.class)
     private LocalDateTime timeChanged;
 
     private UUID authorId;
@@ -46,13 +42,25 @@ public class PostDto {
     private Boolean isDeleted = false;
 
     @Builder.Default
-    private Integer commentsCount = 0;
+    private Long commentsCount = 0L;
 
     @Size(max = 50, message = "Tags list size must not exceed 50")
-    private List<String> tags;
+    private List<TagDto> tags;
 
     @Builder.Default
-    private Integer likeAmount = 0;
+    private Long likeAmount = 0L;
+
+    @Builder.Default
+    private List<ReactionDto.ReactionInfo> reactionType = List.of(
+            ReactionDto.ReactionInfo.builder().reactionType(String.valueOf(ReactionType.delight)).count(0L).build(),
+            ReactionDto.ReactionInfo.builder().reactionType(String.valueOf(ReactionType.malice)).count(0L).build(),
+            ReactionDto.ReactionInfo.builder().reactionType(String.valueOf(ReactionType.heart)).count(0L).build(),
+            ReactionDto.ReactionInfo.builder().reactionType(String.valueOf(ReactionType.sadness)).count(0L).build(),
+            ReactionDto.ReactionInfo.builder().reactionType(String.valueOf(ReactionType.funny)).count(0L).build(),
+            ReactionDto.ReactionInfo.builder().reactionType(String.valueOf(ReactionType.wow)).count(0L).build()
+    );
+
+    private String myReaction;
 
     @Builder.Default
     private Boolean myLike = false;
@@ -60,6 +68,5 @@ public class PostDto {
     @Size(max = 512, message = "Image path must not exceed 512 characters")
     private String imagePath;
 
-    @JsonDeserialize(using = LocalDateTimeDeserializer.class)
     private LocalDateTime publishDate;
 }

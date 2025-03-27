@@ -19,6 +19,7 @@ import ru.skillbox.social_network_bot.security.JwtUtil;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -464,6 +465,13 @@ public class TelegramBotService extends TelegramWebhookBot {
 
         if (postDto.getImagePath() != null) {
             message.append("🖼 [Фото](").append(postDto.getImagePath()).append(")\n\n");
+        }
+
+        if (postDto.getTags() != null && !postDto.getTags().isEmpty()) {
+            String tags = postDto.getTags().stream()
+                    .map(TagDto::name) // Используем метод name() из record
+                    .collect(Collectors.joining(", "));
+            message.append("🖼 Тэги: ").append(tags).append("\n\n");
         }
 
         AccountDto accountDto = getAccountInfo(postDto.getAuthorId());
