@@ -14,7 +14,7 @@ public interface PostServiceClient {
     //@RequestLine("GET")
     //PagePostDto getAll(@QueryMap PostSearchDto postSearchDto);
 
-    @RequestLine("GET sort={sort}&direction={direction}&page={page}&size={size}")
+    @RequestLine("GET")
     PagePostDto getAll(
             @QueryMap PostSearchDto postSearchDto,
             @Param("sort") String sort,
