@@ -37,7 +37,7 @@ public class PagePostDto {
 
     private List<PostDto> content;
 
-    private Sort sort;
+    //private Sort sort;
 
     @NotNull
     private Boolean first;
