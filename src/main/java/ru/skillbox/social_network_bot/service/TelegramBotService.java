@@ -323,7 +323,7 @@ public class TelegramBotService extends TelegramWebhookBot {
     private PagePostDto getPosts(PostSearchDto postSearchDto) {
         try {
             log.info("Getting posts for {}", postSearchDto);
-            return postServiceClient.getAll(postSearchDto);
+            return postServiceClient.getAll(postSearchDto, "publishDate", "asc", 0, 20);
 
         } catch (FeignException e) {
             log.error("Freign client exception: {}", e.getMessage());
@@ -408,7 +408,7 @@ public class TelegramBotService extends TelegramWebhookBot {
                     .accountIds(Collections.singletonList(userId))
                     .build();
 
-            PagePostDto pagePostDto = postServiceClient.getAll(postSearchDto);
+            PagePostDto pagePostDto = postServiceClient.getAll(postSearchDto,"publishDate", "asc", 0, 20);
 
             userFormat(chatId, pagePostDto);
 
