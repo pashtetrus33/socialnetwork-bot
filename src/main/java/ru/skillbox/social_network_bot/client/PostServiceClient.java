@@ -2,11 +2,12 @@ package ru.skillbox.social_network_bot.client;
 
 import feign.Headers;
 import feign.Param;
-import feign.QueryMap;
 import feign.RequestLine;
 import ru.skillbox.social_network_bot.dto.PagePostDto;
 import ru.skillbox.social_network_bot.dto.PostDto;
-import ru.skillbox.social_network_bot.dto.PostSearchDto;
+
+import java.util.List;
+import java.util.UUID;
 
 
 public interface PostServiceClient {
@@ -14,8 +15,10 @@ public interface PostServiceClient {
     //@RequestLine("GET")
     //PagePostDto getAll(@QueryMap PostSearchDto postSearchDto);
 
-    @RequestLine("GET ?sort={sort}&direction={direction}&page={page}&size={size}")
-    PagePostDto getAll(@QueryMap PostSearchDto postSearchDto,
+    @RequestLine("GET")
+    PagePostDto getAll(@Param("isDeleted") Boolean isDeleted,
+                       @Param("withFriends") Boolean withFriends,
+                       @Param("accountIds") List<UUID> accountIds,
                        @Param("sort") String sort,
                        @Param("direction") String direction,
                        @Param("page") int page,
