@@ -123,7 +123,15 @@ public class TelegramBotService extends TelegramWebhookBot {
                     break;
 
                 case "/friends_posts":
-                    getFriends(userSession, chatId, true);
+
+                    sendMessage(chatId, "Enter Page number:");
+                    int pageNumber = Integer.parseInt(text);
+
+                    sendMessage(chatId, "Enter Page size:");
+                    int size = Integer.parseInt(text);
+
+                    getPosts(userSession, chatId, true, pageNumber, size);
+
                     break;
 
                 case "/my_posts":
@@ -131,7 +139,13 @@ public class TelegramBotService extends TelegramWebhookBot {
                     break;
 
                 case "/get_all":
-                    getFriends(userSession, chatId, false);
+                    sendMessage(chatId, "Enter Page number:");
+                    pageNumber = Integer.parseInt(text);
+
+                    sendMessage(chatId, "Enter Page size:");
+                    size = Integer.parseInt(text);
+
+                    getPosts(userSession, chatId, false, pageNumber, size);
                     break;
 
                 case "/create":
@@ -331,10 +345,10 @@ public class TelegramBotService extends TelegramWebhookBot {
 //        }
 //    }
 
-    private PagePostDto getPosts(PostSearchDto postSearchDto) {
+    private PagePostDto getPosts(PostSearchDto postSearchDto, Integer page, Integer size) {
         try {
             log.info("Getting posts for {}", postSearchDto);
-            return postServiceClient.getAll(postSearchDto.getIsDeleted(), postSearchDto.getWithFriends(), null, "publishDate", "asc", 0, 20);
+            return postServiceClient.getAll(postSearchDto.getIsDeleted(), postSearchDto.getWithFriends(), null, "publishDate", "asc", page, size);
 
         } catch (FeignException e) {
             log.error("Freign client exception: {}", e.getMessage());
@@ -355,8 +369,8 @@ public class TelegramBotService extends TelegramWebhookBot {
         }
     }
 
-    private void getFriends(UserSession userSession, Long chatId, boolean withFriends) {
-        // Запрос на получение постов друзей
+    private void getPosts(UserSession userSession, Long chatId, boolean withFriends, Integer page, Integer size) {
+
         if (isAuthenticated(userSession, chatId)) {
             if (Boolean.TRUE.equals(withFriends)) {
                 sendMessage(chatId, "Ок. Let's go for the friends posts...");
@@ -370,7 +384,7 @@ public class TelegramBotService extends TelegramWebhookBot {
                     .withFriends(withFriends)
                     .build();
 
-            PagePostDto pagePostDto = getPosts(postSearchDto);
+            PagePostDto pagePostDto = getPosts(postSearchDto, page, size);
             log.info("PagePostDto: {}", pagePostDto);
 
             userFormat(chatId, pagePostDto);
