@@ -14,7 +14,10 @@ public class UserSession {
     private String password;
     private String title;
     private String postText;
+    private int page;
+    private int size;
     private boolean isAuthenticated;
+    private boolean withFriends;
 
 
     public UserSession(Long chatId) {

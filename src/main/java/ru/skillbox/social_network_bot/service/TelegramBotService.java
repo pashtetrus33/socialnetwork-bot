@@ -123,7 +123,9 @@ public class TelegramBotService extends TelegramWebhookBot {
                     break;
 
                 case "/friends_posts":
-                    getPageInfo(update, chatId, userSession, true);
+                    userSession.setState(UserState.AWAITING_PAGE);
+                    userSession.setWithFriends(true);
+                    sendMessage(chatId, "Please enter page:");
                     break;
 
                 case "/my_posts":
@@ -131,7 +133,9 @@ public class TelegramBotService extends TelegramWebhookBot {
                     break;
 
                 case "/get_all":
-                    getPageInfo(update, chatId, userSession, false);
+                    userSession.setState(UserState.AWAITING_PAGE);
+                    userSession.setWithFriends(false);
+                    sendMessage(chatId, "Please enter page:");
                     break;
 
                 case "/create":
@@ -165,6 +169,26 @@ public class TelegramBotService extends TelegramWebhookBot {
                     break;
 
                 default:
+                    if (userSession.getState() == UserState.AWAITING_PAGE) {
+                        try {
+                            userSession.setPage(Integer.parseInt(text));
+                            userSession.setState(UserState.AWAITING_SIZE);
+
+                        } catch (NumberFormatException e) {
+                            sendMessage(update.getMessage().getChatId(), "Пожалуйста, введите корректный номер страницы.");
+                            userSession.setState(UserState.DEFAULT);
+                            userSession.setWithFriends(false);
+                        }
+                    } else if (userSession.getState() == UserState.AWAITING_SIZE) {
+                        try {
+                            userSession.setSize(Integer.parseInt(text));
+                            getPosts(userSession, chatId);
+
+                        } catch (NumberFormatException e) {
+                            sendMessage(update.getMessage().getChatId(), "Пожалуйста, введите корректное число элементов на странице.");
+                            userSession.setState(UserState.DEFAULT);
+                        }
+                    }
                     if (userSession.getState() == UserState.AWAITING_TITLE) {
                         userSession.setTitle(text);
                         userSession.setState(UserState.AWAITING_TEXT);
@@ -273,28 +297,6 @@ public class TelegramBotService extends TelegramWebhookBot {
         return null;
     }
 
-    private void getPageInfo(Update update, Long chatId, UserSession userSession, Boolean withFriends) {
-        try {
-            sendMessage(chatId, "Enter Page number:");
-
-            String userInput = update.getMessage().getText();
-
-
-            int pageNumber = Integer.parseInt(userInput);  // Преобразуем текст в число
-
-            sendMessage(chatId, "Enter Page size:");
-
-            userInput = update.getMessage().getText();
-
-            int pageSize = Integer.parseInt(userInput);  // Преобразуем текст в число
-
-            getPosts(userSession, chatId, withFriends, pageNumber, pageSize);
-
-        } catch (NumberFormatException e) {
-            sendMessage(update.getMessage().getChatId(), "Пожалуйста, введите корректный номер страницы.");
-        }
-    }
-
 
     private boolean isAuthenticated(UserSession userSession, Long chatId) {
         sendMessage(chatId, "Token validation...");
@@ -367,10 +369,11 @@ public class TelegramBotService extends TelegramWebhookBot {
         }
     }
 
-    private void getPosts(UserSession userSession, Long chatId, boolean withFriends, Integer page, Integer size) {
+    private void getPosts(UserSession userSession, Long chatId) {
 
         if (isAuthenticated(userSession, chatId)) {
-            if (Boolean.TRUE.equals(withFriends)) {
+
+            if (Boolean.TRUE.equals(userSession.isWithFriends())) {
                 sendMessage(chatId, "Ок. Let's go for the friends posts...");
             } else {
                 sendMessage(chatId, "Ок. Let's go for the all posts...");
@@ -379,14 +382,13 @@ public class TelegramBotService extends TelegramWebhookBot {
 
             PostSearchDto postSearchDto = PostSearchDto.builder()
                     .isDeleted(null)
-                    .withFriends(withFriends)
+                    .withFriends(userSession.isWithFriends())
                     .build();
 
-            PagePostDto pagePostDto = getPosts(postSearchDto, page, size);
+            PagePostDto pagePostDto = getPosts(postSearchDto, userSession.getPage(), userSession.getSize());
             log.info("PagePostDto: {}", pagePostDto);
 
             userFormat(chatId, pagePostDto);
-
 
         } else {
             sendMessage(chatId, PLEASE_LOGIN_FIRST);
