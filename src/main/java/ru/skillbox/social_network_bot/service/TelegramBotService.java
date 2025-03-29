@@ -123,15 +123,7 @@ public class TelegramBotService extends TelegramWebhookBot {
                     break;
 
                 case "/friends_posts":
-
-                    sendMessage(chatId, "Enter Page number:");
-                    int pageNumber = Integer.parseInt(text);
-
-                    sendMessage(chatId, "Enter Page size:");
-                    int size = Integer.parseInt(text);
-
-                    getPosts(userSession, chatId, true, pageNumber, size);
-
+                    getPageInfo(update, chatId, userSession, true);
                     break;
 
                 case "/my_posts":
@@ -139,13 +131,7 @@ public class TelegramBotService extends TelegramWebhookBot {
                     break;
 
                 case "/get_all":
-                    sendMessage(chatId, "Enter Page number:");
-                    pageNumber = Integer.parseInt(text);
-
-                    sendMessage(chatId, "Enter Page size:");
-                    size = Integer.parseInt(text);
-
-                    getPosts(userSession, chatId, false, pageNumber, size);
+                    getPageInfo(update, chatId, userSession, false);
                     break;
 
                 case "/create":
@@ -287,6 +273,28 @@ public class TelegramBotService extends TelegramWebhookBot {
         return null;
     }
 
+    private void getPageInfo(Update update, Long chatId, UserSession userSession, Boolean withFriends) {
+        try {
+            sendMessage(chatId, "Enter Page number:");
+
+            String userInput = update.getMessage().getText();
+
+
+            int pageNumber = Integer.parseInt(userInput);  // Преобразуем текст в число
+
+            sendMessage(chatId, "Enter Page size:");
+
+            userInput = update.getMessage().getText();
+
+            int pageSize = Integer.parseInt(userInput);  // Преобразуем текст в число
+
+            getPosts(userSession, chatId, withFriends, pageNumber, pageSize);
+
+        } catch (NumberFormatException e) {
+            sendMessage(update.getMessage().getChatId(), "Пожалуйста, введите корректный номер страницы.");
+        }
+    }
+
 
     private boolean isAuthenticated(UserSession userSession, Long chatId) {
         sendMessage(chatId, "Token validation...");
@@ -334,16 +342,6 @@ public class TelegramBotService extends TelegramWebhookBot {
         }
     }
 
-//    private PagePostDto getPosts(PostSearchDto postSearchDto) {
-//        try {
-//            log.info("Getting posts for {}", postSearchDto);
-//            return postServiceClient.getAll(postSearchDto);
-//
-//        } catch (FeignException e) {
-//            log.error("Freign client exception: {}", e.getMessage());
-//            return null;
-//        }
-//    }
 
     private PagePostDto getPosts(PostSearchDto postSearchDto, Integer page, Integer size) {
         try {
@@ -427,11 +425,6 @@ public class TelegramBotService extends TelegramWebhookBot {
                 return;
             }
             sendMessage(chatId, "Ок. Let's go for my own posts...");
-
-            PostSearchDto postSearchDto = PostSearchDto.builder()
-                    .isDeleted(false)
-                    .accountIds(Collections.singletonList(userId))
-                    .build();
 
             PagePostDto pagePostDto = postServiceClient.getAll(false, null, Collections.singletonList(userId), "publishDate", "asc", 0, 20);
 
@@ -567,7 +560,7 @@ public class TelegramBotService extends TelegramWebhookBot {
                     user.getLogin(),
                     user.getUsername() != null ? user.getUsername() : "N/A",
                     user.getPhoneNumber() != null ? user.getPhoneNumber() : "N/A",
-                    user.getIsActive() ? "✅ Активен" : "❌ Неактивен",
+                    Boolean.TRUE.equals(user.getIsActive()) ? "✅ Активен" : "❌ Неактивен",
                     user.getLanguageCode() != null ? user.getLanguageCode() : "N/A",
                     user.getIsBot() != null && user.getIsBot() ? "🤖 Да" : "👤 Нет",
                     userSession.isAuthenticated() ? "✅ Да" : "❌ Нет",
