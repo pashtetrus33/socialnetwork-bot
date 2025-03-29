@@ -123,9 +123,13 @@ public class TelegramBotService extends TelegramWebhookBot {
                     break;
 
                 case "/friends_posts":
-                    userSession.setState(UserState.AWAITING_PAGE);
-                    userSession.setWithFriends(true);
-                    sendMessage(chatId, "Please enter page:");
+                    if (isAuthenticated(userSession, chatId)) {
+                        userSession.setState(UserState.AWAITING_PAGE);
+                        userSession.setWithFriends(true);
+                        sendMessage(chatId, "Please enter page:");
+                    } else {
+                        sendMessage(chatId, PLEASE_LOGIN_FIRST);
+                    }
                     break;
 
                 case "/my_posts":
@@ -133,9 +137,14 @@ public class TelegramBotService extends TelegramWebhookBot {
                     break;
 
                 case "/get_all":
-                    userSession.setState(UserState.AWAITING_PAGE);
-                    userSession.setWithFriends(false);
-                    sendMessage(chatId, "Please enter page:");
+                    if (isAuthenticated(userSession, chatId)) {
+                        userSession.setState(UserState.AWAITING_PAGE);
+                        userSession.setWithFriends(false);
+                        sendMessage(chatId, "Please enter page:");
+                    } else {
+                        sendMessage(chatId, PLEASE_LOGIN_FIRST);
+                    }
+
                     break;
 
                 case "/create":
@@ -173,6 +182,7 @@ public class TelegramBotService extends TelegramWebhookBot {
                         try {
                             userSession.setPage(Integer.parseInt(text));
                             userSession.setState(UserState.AWAITING_SIZE);
+                            sendMessage(chatId, "Please enter page size:");
 
                         } catch (NumberFormatException e) {
                             sendMessage(update.getMessage().getChatId(), "Пожалуйста, введите корректный номер страницы.");
@@ -187,6 +197,7 @@ public class TelegramBotService extends TelegramWebhookBot {
                         } catch (NumberFormatException e) {
                             sendMessage(update.getMessage().getChatId(), "Пожалуйста, введите корректное число элементов на странице.");
                             userSession.setState(UserState.DEFAULT);
+                            userSession.setWithFriends(false);
                         }
                     }
                     if (userSession.getState() == UserState.AWAITING_TITLE) {
