@@ -505,6 +505,9 @@ public class TelegramBotService extends TelegramWebhookBot {
             message.append("🖼 Тэги: ").append(tags).append("\n\n");
         }
 
+        message.append("✍️ Комментариев: ").append(postDto.getCommentsCount()).append("\n\n");
+
+
         AccountDto accountDto = getAccountInfo(postDto.getAuthorId());
         log.warn("Trying to get account info {}", postDto.getAuthorId());
 
