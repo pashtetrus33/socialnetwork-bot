@@ -8,6 +8,7 @@ import org.telegram.telegrambots.bots.TelegramWebhookBot;
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.User;
 import ru.skillbox.social_network_bot.client.AccountServiceClient;
 import ru.skillbox.social_network_bot.client.AuthServiceClient;
 import ru.skillbox.social_network_bot.client.PostServiceClient;
@@ -15,6 +16,7 @@ import ru.skillbox.social_network_bot.dto.*;
 import ru.skillbox.social_network_bot.entity.TelegramUser;
 import ru.skillbox.social_network_bot.security.JwtUtil;
 
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -59,26 +61,75 @@ public class TelegramBotService extends TelegramWebhookBot {
 
     @Override
     public BotApiMethod<?> onWebhookUpdateReceived(Update update) {
+
+        String accessToken;
+
         if (update.hasMessage() && update.getMessage().hasText()) {
+
+            String phoneNumber = "No phone number";
+            User user = update.getMessage().getFrom();
             Long chatId = update.getMessage().getChatId();
             String text = update.getMessage().getText();
-            UserSession userSession = getUserSession(chatId);
+
+            tokenService.setChatId(chatId);
+
+            if (update.hasMessage() && update.getMessage().hasContact()) {
+                phoneNumber = update.getMessage().getContact().getPhoneNumber();
+            }
+
+            UserSession userSession = userSessions.getOrDefault(chatId, new UserSession(chatId));
+            userSession.setChatId(chatId);
 
             switch (text) {
                 case "/start":
-                    handleStartCommand(chatId);
+                    // Приветствие и список команд
+                    sendMessage(chatId, """
+                            Привет! 😊 Я ваш бот и готов помочь!
+                            
+                            Список доступных команд:
+                            /login - Вход без пароля
+                            /signin - Вход по паролю
+                            /create - Создать пост
+                            /friends_posts - Посты друзей
+                            /my_posts - Мои посты
+                            /get_all - Все посты
+                            /validate - Проверить текущий токен
+                            
+                            Чем могу помочь? 🙂
+                            """);
                     break;
 
+
                 case "/login":
-                    handleLoginCommand(chatId, userSession);
+                    // Начало процесса логина
+                    if (tokenService.getTokens().get(chatId) != null) {
+                        tokenService.getTokens().put(chatId, null);
+                        sendMessage(chatId, "Current access token is deleted for chatId " + chatId);
+                    }
+
+                    userSession.setState(UserState.AWAITING_LOGIN_WITHOUTPASSWORD);
+                    sendMessage(chatId, "Please enter your login:");
                     break;
 
                 case "/signin":
-                    handleSigninCommand(chatId, userSession);
+                    // Начало процесса логина
+                    if (tokenService.getTokens().get(chatId) != null) {
+                        tokenService.getTokens().put(chatId, null);
+                        sendMessage(chatId, "Current access token is deleted for chatId " + chatId);
+                    }
+
+                    userSession.setState(UserState.AWAITING_LOGIN);
+                    sendMessage(chatId, "Please enter your login:");
                     break;
 
                 case "/friends_posts":
-                    handleFriendsPostsCommand(chatId, userSession);
+                    if (isAuthenticated(userSession, chatId)) {
+                        userSession.setState(UserState.AWAITING_PAGE);
+                        userSession.setWithFriends(true);
+                        sendMessage(chatId, "Please enter page:");
+                    } else {
+                        sendMessage(chatId, PLEASE_LOGIN_FIRST);
+                    }
                     break;
 
                 case "/my_posts":
@@ -86,7 +137,14 @@ public class TelegramBotService extends TelegramWebhookBot {
                     break;
 
                 case "/get_all":
-                    handleGetAllPostsCommand(chatId, userSession);
+                    if (isAuthenticated(userSession, chatId)) {
+                        userSession.setState(UserState.AWAITING_PAGE);
+                        userSession.setWithFriends(false);
+                        sendMessage(chatId, "Please enter page:");
+                    } else {
+                        sendMessage(chatId, PLEASE_LOGIN_FIRST);
+                    }
+
                     break;
 
                 case "/create":
@@ -98,150 +156,156 @@ public class TelegramBotService extends TelegramWebhookBot {
                     break;
 
                 case "/validate":
-                    validateToken(chatId, userSession);
+
+                    accessToken = tokenService.getTokens().get(chatId);
+                    sendMessage(chatId, "Token validation for token " + accessToken + " chatId " + chatId);
+
+                    if (tokenValid(accessToken)) {
+                        sendMessage(chatId, "Token is valid for chatId " + chatId);
+                        try {
+                            sendMessage(chatId, "Username: " + jwtUtil.extractUsername(accessToken));
+                            sendMessage(chatId, "UserId: " + jwtUtil.extractUserId(accessToken));
+                        } catch (IllegalArgumentException e) {
+                            log.error(e.getMessage());
+                            sendMessage(chatId, "Invalid token. Please try again.");
+                            userSession.setState(UserState.DEFAULT);
+                            userSession.setAuthenticated(false);
+                        }
+                    } else {
+                        sendMessage(chatId, "Token is not valid. Please login first.");
+                        userSession.setState(UserState.DEFAULT);
+                    }
                     break;
 
                 default:
-                    handleDefaultInput(userSession, chatId, text);
+                    if (userSession.getState() == UserState.AWAITING_PAGE) {
+                        try {
+                            userSession.setPage(Integer.parseInt(text));
+                            userSession.setState(UserState.AWAITING_SIZE);
+                            sendMessage(chatId, "Please enter page size:");
+
+                        } catch (NumberFormatException e) {
+                            sendMessage(update.getMessage().getChatId(), "Пожалуйста, введите корректный номер страницы.");
+                            userSession.setState(UserState.DEFAULT);
+                            userSession.setWithFriends(false);
+                        }
+                    } else if (userSession.getState() == UserState.AWAITING_SIZE) {
+                        try {
+                            userSession.setSize(Integer.parseInt(text));
+                            getPosts(userSession, chatId);
+
+                        } catch (NumberFormatException e) {
+                            sendMessage(update.getMessage().getChatId(), "Пожалуйста, введите корректное число элементов на странице.");
+                            userSession.setState(UserState.DEFAULT);
+                            userSession.setWithFriends(false);
+                        }
+                    }
+                    if (userSession.getState() == UserState.AWAITING_TITLE) {
+                        userSession.setTitle(text);
+                        userSession.setState(UserState.AWAITING_TEXT);
+                        sendMessage(chatId, "Please enter text:");
+                    } else if (userSession.getState() == UserState.AWAITING_TEXT) {
+
+                        PostDto postDto = PostDto.builder()
+                                .title(userSession.getTitle())
+                                .postText(text)
+                                .build();
+
+                        boolean isCreated = createPost(postDto);
+
+                        if (isCreated) {
+                            sendMessage(chatId, "Post is created.");
+                        } else {
+                            sendMessage(chatId, "Post is not created.");
+                        }
+                        userSession.setState(UserState.DEFAULT);
+                    }
+
+                    // Обработка ввода логина и пароля
+                    if (userSession.getState() == UserState.AWAITING_LOGIN) {
+
+                        userSession.setLogin(text);
+
+                        userSession.setState(UserState.AWAITING_PASSWORD);
+                        sendMessage(chatId, "Please enter your password:");
+
+
+                    } else if (userSession.getState() == UserState.AWAITING_LOGIN_WITHOUTPASSWORD) {
+
+                        userSession.setLogin(text);
+
+                        accessToken = authenticateUser(userSession.getLogin(), "fake");
+
+                        if (accessToken != null) {
+                            sendMessage(chatId, "Successful authorization without password! Token: " + accessToken);
+                            tokenService.getTokens().put(chatId, accessToken);
+                            userSession.setAuthenticated(true);
+
+                        } else {
+                            userSession.setState(UserState.DEFAULT);
+                            sendMessage(chatId, "Failed authorization without password!");
+                        }
+
+                    } else if (userSession.getState() == UserState.AWAITING_PASSWORD) {
+                        userSession.setPassword(text);
+                        String login = userSession.getLogin();
+                        String password = userSession.getPassword();
+
+                        accessToken = authenticateUser(login, password);
+
+                        if (accessToken != null) {
+                            sendMessage(chatId, "Successful authorization!\nAccess token: " + accessToken);
+                            tokenService.getTokens().put(chatId, accessToken);
+                            userSession.setAuthenticated(true);
+                            TelegramUser telegramUser = TelegramUser.builder()
+                                    .chatId(chatId)
+                                    .login(login)
+                                    .firstName(user.getFirstName())
+                                    .lastName(user.getLastName())
+                                    .username(user.getUserName())
+                                    .phoneNumber(phoneNumber)
+                                    .languageCode(user.getLanguageCode())
+                                    .isBot(user.getIsBot()) // Или false, если хотите явно указать
+                                    .isActive(true) // Предположим, что по умолчанию активный
+                                    .build();
+
+                            // Проверяем, существует ли пользователь с таким chatId
+                            TelegramUser existingUser = telegramUserService.findByChatId(telegramUser.getChatId());
+
+                            if (existingUser != null) {
+                                // Если пользователь с таким chatId уже существует, обновляем его данные
+                                existingUser.setLogin(telegramUser.getLogin());
+                                existingUser.setFirstName(telegramUser.getFirstName());
+                                existingUser.setLastName(telegramUser.getLastName());
+                                existingUser.setUsername(telegramUser.getUsername());
+                                existingUser.setPhoneNumber(telegramUser.getPhoneNumber());
+                                existingUser.setLanguageCode(telegramUser.getLanguageCode());
+                                existingUser.setIsBot(telegramUser.getIsBot());
+                                existingUser.setIsActive(telegramUser.getIsActive());
+                                existingUser.setUpdatedAt(LocalDateTime.now());
+
+                                // Сохраняем изменения в базу
+                                telegramUserService.save(existingUser);
+                                log.info("Telegram user updated and saved: {}", existingUser);
+
+                            } else {
+                                // Если пользователя с таким chatId нет, создаем нового
+                                telegramUserService.save(telegramUser);
+                                log.info("New telegram user created: {}", telegramUser);
+                            }
+
+
+                        } else {
+                            sendMessage(chatId, "Login or password is incorrect. Or auth service is unavailable. Please try again.");
+                            userSession.setState(UserState.DEFAULT);
+                        }
+                    }
                     break;
             }
 
             userSessions.put(chatId, userSession);
         }
         return null;
-    }
-
-    private void handleStartCommand(Long chatId) {
-        sendMessage(chatId, """
-            Привет! 😊 Я ваш бот и готов помочь!
-            Список доступных команд:
-            /login - Вход без пароля
-            /signin - Вход по паролю
-            /create - Создать пост
-            /friends_posts - Посты друзей
-            /my_posts - Мои посты
-            /get_all - Все посты
-            /validate - Проверить текущий токен
-            Чем могу помочь? 🙂
-            """);
-    }
-
-    private void handleLoginCommand(Long chatId, UserSession userSession) {
-        clearCurrentToken(chatId);
-        userSession.setState(UserState.AWAITING_LOGIN);
-        sendMessage(chatId, "Please enter your login:");
-    }
-
-    private void handleSigninCommand(Long chatId, UserSession userSession) {
-        clearCurrentToken(chatId);
-        userSession.setState(UserState.AWAITING_LOGIN_WITHOUTPASSWORD);
-        sendMessage(chatId, "Please enter your login:");
-    }
-
-    private void handleFriendsPostsCommand(Long chatId, UserSession userSession) {
-        if (isAuthenticated(userSession, chatId)) {
-            userSession.setState(UserState.AWAITING_PAGE);
-            userSession.setWithFriends(true);
-            sendMessage(chatId, "Please enter page:");
-        } else {
-            sendMessage(chatId, PLEASE_LOGIN_FIRST);
-        }
-    }
-
-    private void handleGetAllPostsCommand(Long chatId, UserSession userSession) {
-        if (isAuthenticated(userSession, chatId)) {
-            userSession.setState(UserState.AWAITING_PAGE);
-            userSession.setWithFriends(false);
-            sendMessage(chatId, "Please enter page:");
-        } else {
-            sendMessage(chatId, PLEASE_LOGIN_FIRST);
-        }
-    }
-
-    private void validateToken(Long chatId, UserSession userSession) {
-        String accessToken = tokenService.getTokens().get(chatId);
-        sendMessage(chatId, "Token validation for token " + accessToken + " chatId " + chatId);
-
-        if (tokenValid(accessToken)) {
-            sendMessage(chatId, "Token is valid for chatId " + chatId);
-            try {
-                sendMessage(chatId, "Username: " + jwtUtil.extractUsername(accessToken));
-                sendMessage(chatId, "UserId: " + jwtUtil.extractUserId(accessToken));
-            } catch (IllegalArgumentException e) {
-                log.error(e.getMessage());
-                sendMessage(chatId, "Invalid token. Please try again.");
-                userSession.setState(UserState.DEFAULT);
-                userSession.setAuthenticated(false);
-            }
-        } else {
-            sendMessage(chatId, "Token is not valid. Please login first.");
-            userSession.setState(UserState.DEFAULT);
-        }
-    }
-
-    private void handleDefaultInput(UserSession userSession, Long chatId, String text) {
-        if (userSession.getState() == UserState.AWAITING_PAGE) {
-            try {
-                userSession.setPage(Integer.parseInt(text));
-                userSession.setState(UserState.AWAITING_SIZE);
-                sendMessage(chatId, "Please enter page size:");
-            } catch (NumberFormatException e) {
-                sendMessage(chatId, "Пожалуйста, введите корректный номер страницы.");
-                resetUserSession(userSession);
-            }
-        } else if (userSession.getState() == UserState.AWAITING_SIZE) {
-            try {
-                userSession.setSize(Integer.parseInt(text));
-                getPosts(userSession, chatId);
-            } catch (NumberFormatException e) {
-                sendMessage(chatId, "Пожалуйста, введите корректное число элементов на странице.");
-                resetUserSession(userSession);
-            }
-        } else {
-            handlePostCreation(userSession, chatId, text);
-        }
-    }
-
-    private void handlePostCreation(UserSession userSession, Long chatId, String text) {
-        if (userSession.getState() == UserState.AWAITING_TITLE) {
-            userSession.setTitle(text);
-            userSession.setState(UserState.AWAITING_TEXT);
-            sendMessage(chatId, "Please enter text:");
-        } else if (userSession.getState() == UserState.AWAITING_TEXT) {
-            createPostAndRespond(userSession, chatId, text);
-        }
-    }
-
-    private void createPostAndRespond(UserSession userSession, Long chatId, String text) {
-        PostDto postDto = PostDto.builder()
-                .title(userSession.getTitle())
-                .postText(text)
-                .build();
-
-        boolean isCreated = createPost(postDto);
-
-        if (isCreated) {
-            sendMessage(chatId, "Post is created.");
-        } else {
-            sendMessage(chatId, "Post is not created.");
-        }
-        userSession.setState(UserState.DEFAULT);
-    }
-
-    private void resetUserSession(UserSession userSession) {
-        userSession.setState(UserState.DEFAULT);
-        userSession.setWithFriends(false);
-    }
-
-    private void clearCurrentToken(Long chatId) {
-        if (tokenService.getTokens().get(chatId) != null) {
-            tokenService.getTokens().put(chatId, null);
-            sendMessage(chatId, "Current access token is deleted for chatId " + chatId);
-        }
-    }
-
-    private UserSession getUserSession(Long chatId) {
-        return userSessions.getOrDefault(chatId, new UserSession(chatId));
     }
 
 
@@ -259,6 +323,26 @@ public class TelegramBotService extends TelegramWebhookBot {
         } catch (Exception e) {
             log.error("Error while sending message: {}", e.getMessage());
         }
+    }
+
+    private String authenticateUser(String login, String password) {
+
+        String accessToken;
+
+        try {
+            AuthenticateRq authenticateRq = new AuthenticateRq();
+            authenticateRq.setEmail(login);
+            authenticateRq.setPassword(password);
+
+            log.info("AuthenticateRq: {}", authenticateRq);
+
+            accessToken = authServiceClient.login(authenticateRq).getAccessToken();
+
+        } catch (FeignException e) {
+            return null;
+        }
+
+        return accessToken;
     }
 
     private boolean tokenValid(String token) {
@@ -470,43 +554,36 @@ public class TelegramBotService extends TelegramWebhookBot {
 
     private static void userFormat(UserSession userSession, List<TelegramUser> users, StringBuilder message) {
         for (TelegramUser user : users) {
-            message.append(getFormattedUserInfo(user, userSession));
+            UserState state = userSession.getState();
+            message.append(String.format("""
+                            🆔 *ID:* %s
+                            🗣 *Имя:* %s %s
+                            🔹 *Логин:* %s
+                            📟 *Username:* %s
+                            📞 *Телефон:* %s
+                            🔄 *Статус:* %s
+                            🌍 *Язык:* %s
+                            🤖 *Бот:* %s
+                            🔐 *Аутентификация:* %s
+                            ⚙ *Состояние:* %s
+                            📅 *Создан:* %s
+                            🕒 *Обновлен:* %s
+                            ━━━━━━━━━━━━━━━━━━━━
+                            """,
+                    user.getId(),
+                    user.getFirstName(),
+                    user.getLastName() != null ? user.getLastName() : "",
+                    user.getLogin(),
+                    user.getUsername() != null ? user.getUsername() : "N/A",
+                    user.getPhoneNumber() != null ? user.getPhoneNumber() : "N/A",
+                    Boolean.TRUE.equals(user.getIsActive()) ? "✅ Активен" : "❌ Неактивен",
+                    user.getLanguageCode() != null ? user.getLanguageCode() : "N/A",
+                    user.getIsBot() != null && user.getIsBot() ? "🤖 Да" : "👤 Нет",
+                    userSession.isAuthenticated() ? "✅ Да" : "❌ Нет",
+                    state != null ? state.name() : "UNKNOWN",
+                    user.getCreatedAt(),
+                    user.getUpdatedAt()
+            ));
         }
-    }
-
-    private static String getFormattedUserInfo(TelegramUser user, UserSession userSession) {
-        return String.format("""
-                    🆔 *ID:* %s
-                    🗣 *Имя:* %s %s
-                    🔹 *Логин:* %s
-                    📟 *Username:* %s
-                    📞 *Телефон:* %s
-                    🔄 *Статус:* %s
-                    🌍 *Язык:* %s
-                    🤖 *Бот:* %s
-                    🔐 *Аутентификация:* %s
-                    ⚙ *Состояние:* %s
-                    📅 *Создан:* %s
-                    🕒 *Обновлен:* %s
-                    ━━━━━━━━━━━━━━━━━━━━
-                    """,
-                user.getId(),
-                user.getFirstName(),
-                getOrDefault(user.getLastName(), ""),
-                user.getLogin(),
-                getOrDefault(user.getUsername(), "N/A"),
-                getOrDefault(user.getPhoneNumber(), "N/A"),
-                user.getIsActive() ? "✅ Активен" : "❌ Неактивен",
-                getOrDefault(user.getLanguageCode(), "N/A"),
-                Boolean.TRUE.equals(user.getIsBot()) ? "🤖 Да" : "👤 Нет",
-                userSession.isAuthenticated() ? "✅ Да" : "❌ Нет",
-                getOrDefault(userSession.getState(), "N/A"),
-                user.getCreatedAt(),
-                user.getUpdatedAt()
-        );
-    }
-
-    private static <T> T getOrDefault(T value, T defaultValue) {
-        return value != null ? value : defaultValue;
     }
 }
