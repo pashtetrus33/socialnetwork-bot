@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import jakarta.validation.constraints.*;
 import lombok.*;
 import ru.skillbox.social_network_bot.config.LocalDateTimeDeserializer;
-import ru.skillbox.social_network_bot.config.SortDeserializer;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -57,12 +56,12 @@ public class PostDto {
 
     @Builder.Default
     private List<ReactionDto.ReactionInfo> reactionType = List.of(
-            ReactionDto.ReactionInfo.builder().reactionType(String.valueOf(ReactionType.delight)).count(0L).build(),
-            ReactionDto.ReactionInfo.builder().reactionType(String.valueOf(ReactionType.malice)).count(0L).build(),
-            ReactionDto.ReactionInfo.builder().reactionType(String.valueOf(ReactionType.heart)).count(0L).build(),
-            ReactionDto.ReactionInfo.builder().reactionType(String.valueOf(ReactionType.sadness)).count(0L).build(),
-            ReactionDto.ReactionInfo.builder().reactionType(String.valueOf(ReactionType.funny)).count(0L).build(),
-            ReactionDto.ReactionInfo.builder().reactionType(String.valueOf(ReactionType.wow)).count(0L).build()
+            ReactionDto.ReactionInfo.builder().reactionType(String.valueOf(ReactionType.DELIGHT.getName())).count(0L).build(),
+            ReactionDto.ReactionInfo.builder().reactionType(String.valueOf(ReactionType.MALICE.getName())).count(0L).build(),
+            ReactionDto.ReactionInfo.builder().reactionType(String.valueOf(ReactionType.HEART.getName())).count(0L).build(),
+            ReactionDto.ReactionInfo.builder().reactionType(String.valueOf(ReactionType.SADNESS.getName())).count(0L).build(),
+            ReactionDto.ReactionInfo.builder().reactionType(String.valueOf(ReactionType.FUNNY.getName())).count(0L).build(),
+            ReactionDto.ReactionInfo.builder().reactionType(String.valueOf(ReactionType.WOW.getName())).count(0L).build()
     );
 
     private String myReaction;
