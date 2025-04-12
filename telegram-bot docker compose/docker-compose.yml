@@ -4,7 +4,7 @@ services:
     container_name: telegram-bot
     restart: always
     env_file:
-      - .env
+      - .env-file
     networks:
       - infrastructure_app-network
 
